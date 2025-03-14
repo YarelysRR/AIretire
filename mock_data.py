@@ -7,7 +7,7 @@ def format_balance(amount):
 mock_users = {
     "RF-1234": {
         "account_id": "RF-1234",
-        "name": "John Doe",
+        "name": "Alberto Torres",
         "balance": 500000,  # Stored as a number
         "type": "401(k)",
         "last_login": "2025-03-10",

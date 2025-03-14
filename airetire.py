@@ -185,7 +185,7 @@ def display_navigation():
     st.markdown("</div>", unsafe_allow_html=True)
 
 # Display Success, Error, and Info Messages with custom styling
-def display_success(message):
+def display_success(message, speak=True):
     st.markdown(
         f"""
         <div style='
@@ -201,9 +201,10 @@ def display_success(message):
         """,
         unsafe_allow_html=True,
     )
-    text_to_speech(f"Success: {message}")
+    if speak:
+        text_to_speech(f"Success: {message}")
 
-def display_error(message):
+def display_error(message, speak=True):
     st.markdown(
         f"""
         <div style='
@@ -219,9 +220,10 @@ def display_error(message):
         """,
         unsafe_allow_html=True,
     )
-    text_to_speech(f"Error: {message}")
-
-def display_info(message):
+    if speak:
+        text_to_speech(f"Error: {message}")
+        
+def display_info(message, speak=True):
     st.markdown(
         f"""
         <div style='
@@ -237,7 +239,8 @@ def display_info(message):
         """,
         unsafe_allow_html=True,
     )
-    text_to_speech(f"Info: {message}")
+    if speak:
+        text_to_speech(f"Info: {message}")
 
 # Accessibility Controls in Sidebar
 def display_accessibility_controls():
@@ -302,22 +305,32 @@ def render_login_page():
                 return
 
             account_id = document_result["data"].get("documentNumber", "").strip()
-            if account_id and not account_id.startswith("RF-"):
+            needs_format_correction = account_id and not account_id.startswith("RF-")
+            
+            if needs_format_correction:
                 account_id = "RF-" + account_id
-                display_info(f"ID format corrected to: {account_id}")
+                display_info(f"ID format corrected to: {account_id}", speak=False)  # Don't speak this
 
             if account_id in fraud_db:
                 display_error("Fraud detected. Please contact support.")
                 return
 
+            # Check if this is a valid user account
             user_data = mock_users.get(account_id)
             if user_data:
-                st.session_state.verified_user = user_data
+                # User exists, set session state and navigate
+                st.session_state.verified_user = user_data.copy()
                 st.session_state.verified_user["account_id"] = account_id
                 display_success(f"Welcome, {user_data['name']}!")
-                navigate_to("dashboard")
+                st.session_state.current_page = "dashboard"
+                st.rerun()
             else:
-                display_error("Invalid Account ID. Please try again.")
+                # User doesn't exist
+                if needs_format_correction:
+                    # If we already displayed a format correction, don't speak the error message
+                    display_error("Invalid Account ID. Please try again.")
+                else:
+                    display_error("Invalid Account ID. Please try again.")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
