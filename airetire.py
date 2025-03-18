@@ -853,229 +853,140 @@ def render_form_filling():
 
 # Add to AIretire.py
 def render_ai_assistant():
+    # Initialize session state variables at the top level
+    for key, default_value in {
+        "messages": [],
+        "is_recording": False,
+        "recording_start_time": None,
+        "voice_input": None,
+        "is_speaking": False,
+        "stop_speech_requested": False,
+        "processing_input": False,
+        "current_transcription": None
+    }.items():
+        if key not in st.session_state:
+            st.session_state[key] = default_value
+
     st.markdown(
         "<h2 style='text-align: center;'>Trusted Companion</h2>",
         unsafe_allow_html=True,
     )
 
-    # Add help text right after title, centered and compact
-    _, col2, _ = st.columns([1, 2, 1])  # Use columns for centering
-    with col2:
-        st.markdown("""
-            <div style='
-                margin: 1rem auto;
-                padding: 1rem;
-                border-radius: 0.5rem;
-                background-color: #1b5e8a;
-                color: white;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                text-align: left;
-                max-width: 500px;
-            '>
-                <h4 style='margin: 0; color: white; font-size: 1.1rem;'>💡 Quick Tips:</h4>
-                <ul style='margin: 0.5rem 0; font-size: 1rem; line-height: 1.4; padding-left: 1.5rem;'>
-                    <li>Click 🎤 to start speaking</li>
-                    <li>Click 🔴 to stop recording</li>
-                    <li>Review and click ✅ Submit</li>
-                </ul>
-            </div>
-        """, unsafe_allow_html=True)
-
-    # Initialize chat history and voice control states
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-    if "is_recording" not in st.session_state:
-        st.session_state.is_recording = False
-    if "current_transcription" not in st.session_state:
-        st.session_state.current_transcription = ""
-    if "is_speaking" not in st.session_state:
-        st.session_state.is_speaking = False
-    if "stop_speech_requested" not in st.session_state:
-        st.session_state.stop_speech_requested = False
-    if "voice_input_ready" not in st.session_state:
-        st.session_state.voice_input_ready = False
-    if "needs_rerun" not in st.session_state:
-        st.session_state.needs_rerun = False
-
-    # Display chat messages
+    # Display chat messages from history
     for idx, msg in enumerate(st.session_state.messages):
-        st.chat_message(msg["role"]).write(msg["content"])
-        # Add stop speaking button for assistant messages
-        if msg["role"] == "assistant" and st.session_state.text_to_speech_enabled:
-            if st.session_state.is_speaking:
+        with st.chat_message(msg["role"]):
+            st.write(msg["content"])
+            if (msg["role"] == "assistant" and 
+                st.session_state.text_to_speech_enabled and 
+                st.session_state.is_speaking and 
+                idx == len(st.session_state.messages) - 1):
                 if st.button("🔇 Stop Reading", key=f"stop_{idx}"):
                     st.session_state.stop_speech_requested = True
                     st.session_state.is_speaking = False
-                    st.session_state.needs_rerun = True
+                    st.rerun()
 
-    # Create input container with improved layout
+    # Input area with improved layout
     input_container = st.container()
-    
     with input_container:
         col1, col2 = st.columns([6, 1])
         
         with col1:
             text_input = st.chat_input(
                 "Type your message or click the microphone to speak",
-                key="chat_input"
+                key="chat_input",
+                disabled=st.session_state.is_recording
             )
         
         with col2:
-            # Dynamic microphone button based on state
             if not st.session_state.is_recording:
-                mic_button = st.button("🎤", help="Click to start speaking", key="start_mic")
-                if mic_button:
+                if st.button("🎤", help="Click to start speaking", key="start_mic"):
                     st.session_state.is_recording = True
-                    st.session_state.needs_rerun = True
+                    st.session_state.recording_start_time = datetime.now()
+                    st.session_state.voice_input = None
+                    st.rerun()
             else:
-                stop_button = st.button("🔴 Stop", help="Click to stop recording", key="stop_mic")
-                if stop_button:
+                if st.button("🔴", help="Click to stop recording", key="stop_mic"):
                     st.session_state.is_recording = False
-                    st.session_state.needs_rerun = True
+                    st.rerun()
 
-    # Handle recording state and show feedback
-    if st.session_state.is_recording:
-        # Create a container for recording feedback
-        feedback_container = st.container()
-        
-        with feedback_container:
-            st.markdown("""
+    # Recording handler with precise timing
+    if st.session_state.is_recording and st.session_state.recording_start_time:
+        elapsed_time = (datetime.now() - st.session_state.recording_start_time).total_seconds()
+        remaining_time = max(0, int(20 - elapsed_time))
+
+        if remaining_time > 0:
+            st.markdown(f"""
                 <div style='padding: 1rem; border-radius: 0.5rem; background-color: #d32f2f; margin: 1rem 0;'>
                     <p style='color: white; margin: 0; font-size: 1.2rem; font-weight: bold;'>
-                        🎙️ Recording... Click 'Stop' when finished
+                        🎙️ Recording... {remaining_time} seconds remaining
                     </p>
                 </div>
             """, unsafe_allow_html=True)
             
-            # Start recording and show real-time transcription
-            with st.spinner("Listening..."):
-                voice_input = speech_to_text()
-                if voice_input:
-                    st.session_state.current_transcription = voice_input
-                    st.markdown(f"""
-                        <div style='padding: 1rem; border-radius: 0.5rem; background-color: #1976d2; margin: 1rem 0;'>
-                            <p style='color: white; margin: 0; font-size: 1.1rem;'>You said:</p>
-                            <p style='color: white; margin: 0.5rem 0 0 0; font-size: 1.2rem; font-weight: bold;'>
-                                "{voice_input}"
-                            </p>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    # Add submit and cancel buttons with improved visibility
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        submit_button = st.button("✅ Submit", use_container_width=True, key="submit_voice")
-                        if submit_button:
-                            try:
-                                processed_prompt = process_prompt(voice_input)
-                                st.session_state.messages.append({"role": "user", "content": voice_input})
-                                
-                                with st.spinner("Thinking..."):
-                                    response = get_ai_response(processed_prompt)
-                                
-                                st.session_state.messages.append({"role": "assistant", "content": response})
-                                if st.session_state.text_to_speech_enabled:
-                                    st.session_state.is_speaking = True
-                                    text_to_speech(response)
-                                
-                                # Reset recording state
-                                st.session_state.is_recording = False
-                                st.session_state.current_transcription = ""
-                                st.session_state.needs_rerun = True
-                                
-                            except ValueError as e:
-                                st.error(f"Safety check failed: {str(e)}")
-                                suggestion = suggest_alternative(voice_input)
-                                st.info(f"Try asking instead: '{suggestion}'")
-                                if st.session_state.text_to_speech_enabled:
-                                    text_to_speech(f"Safety check failed. Try asking instead: {suggestion}")
-                    
-                    with col2:
-                        cancel_button = st.button("❌ Cancel", use_container_width=True, key="cancel_voice")
-                        if cancel_button:
-                            st.session_state.is_recording = False
-                            st.session_state.current_transcription = ""
-                            st.session_state.needs_rerun = True
+            voice_input = speech_to_text()
+            if voice_input:
+                st.session_state.voice_input = voice_input
+                st.session_state.is_recording = False
+                st.rerun()
+        else:
+            st.session_state.is_recording = False
+            st.session_state.recording_start_time = None
+            st.rerun()
 
-    # Handle text input
+    # Voice input review and submission
+    if st.session_state.voice_input and not st.session_state.is_recording:
+        st.markdown(f"""
+            <div style='padding: 1rem; border-radius: 0.5rem; background-color: #1976d2; margin: 1rem 0;'>
+                <p style='color: white; margin: 0; font-size: 1.1rem;'>Transcribed Text:</p>
+                <p style='color: white; margin: 0.5rem 0 0 0; font-size: 1.2rem; font-weight: bold;'>
+                    "{st.session_state.voice_input}"
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+
+        submit_col, cancel_col = st.columns(2)
+        with submit_col:
+            if st.button("✅ Submit", use_container_width=True):
+                process_voice_input(st.session_state.voice_input)
+                st.session_state.voice_input = None
+                st.rerun()
+
+        with cancel_col:
+            if st.button("❌ Cancel", use_container_width=True):
+                st.session_state.voice_input = None
+                st.rerun()
+
+    # Text input handler
     if text_input:
-        # Immediately display the user's question in the chat
-        st.session_state.messages.append({"role": "user", "content": text_input})
-        
-        try:
-            # Process the prompt with safety checks
-            processed_prompt = process_prompt(text_input)
-            
-            with st.spinner("Thinking..."):
-                response = get_ai_response(processed_prompt)
-            
-            # Display the assistant's response in the chat
-            st.session_state.messages.append({"role": "assistant", "content": response})
-            
-            # Handle text-to-speech if enabled
-            if st.session_state.text_to_speech_enabled:
-                try:
-                    audio_html = text_to_speech(response)
-                    if audio_html:
-                        st.markdown(audio_html, unsafe_allow_html=True)
-                        st.session_state.is_speaking = True
-                except Exception as e:
-                    st.error(f"Text-to-speech error: {e}")
-            
-            # Update UI
-            st.session_state.needs_rerun = True
-
-        except ValueError as e:
-            st.error(f"Safety check failed: {str(e)}")
-            suggestion = suggest_alternative(text_input)
-            st.info(f"Try asking instead: '{suggestion}'")
-            
-            # Handle text-to-speech for error message if enabled
-            if st.session_state.text_to_speech_enabled:
-                try:
-                    error_msg = f"Safety check failed. Try asking instead: {suggestion}"
-                    audio_html = text_to_speech(error_msg)
-                    if audio_html:
-                        st.markdown(audio_html, unsafe_allow_html=True)
-                except Exception as e:
-                    st.error(f"Text-to-speech error: {e}")
-            
-            st.session_state.needs_rerun = True
-
-    # Handle voice input submission
-    if st.session_state.current_transcription:
-        # Display the transcribed voice input for review
-        st.session_state.messages.append({"role": "user", "content": st.session_state.current_transcription})
-        
-        try:
-            processed_prompt = process_prompt(st.session_state.current_transcription)
-            
-            with st.spinner("Thinking..."):
-                response = get_ai_response(processed_prompt)
-            
-            # Display the assistant's response in the chat
-            st.session_state.messages.append({"role": "assistant", "content": response})
-            
-            # Use text-to-speech if enabled
-            if st.session_state.text_to_speech_enabled:
-                st.session_state.is_speaking = True
-                text_to_speech(response)
-            
-            # Reset transcription state
-            st.session_state.current_transcription = ""
-            st.session_state.needs_rerun = True
-
-        except ValueError as e:
-            st.error(f"Safety check failed: {str(e)}")
-            suggestion = suggest_alternative(st.session_state.current_transcription)
-            st.info(f"Try asking instead: '{suggestion}'")
-            if st.session_state.text_to_speech_enabled:
-                text_to_speech(f"Safety check failed. Try asking instead: {suggestion}")
-
-    # Trigger a single rerun if needed
-    if st.session_state.needs_rerun:
-        st.session_state.needs_rerun = False
+        process_voice_input(text_input)
         st.rerun()
+
+def process_voice_input(input_text):
+    """Helper function to process both voice and text input"""
+    try:
+        processed_prompt = process_prompt(input_text)
+        with st.spinner("Processing..."):
+            response = get_ai_response(processed_prompt)
+            
+        # Update chat history
+        st.session_state.messages.append({"role": "user", "content": input_text})
+        st.session_state.messages.append({"role": "assistant", "content": response})
+        
+        # Handle text-to-speech
+        if st.session_state.text_to_speech_enabled:
+            st.session_state.is_speaking = True
+            audio_html = text_to_speech(response)
+            if audio_html:
+                st.markdown(audio_html, unsafe_allow_html=True)
+    
+    except ValueError as e:
+        st.error(f"Safety check failed: {str(e)}")
+        suggestion = suggest_alternative(input_text)
+        st.info(f"Try asking instead: '{suggestion}'")
+        if st.session_state.text_to_speech_enabled:
+            audio_html = text_to_speech(f"Safety check failed. Try asking instead: {suggestion}")
+            if audio_html:
+                st.markdown(audio_html, unsafe_allow_html=True)
 
 
 # Main Application Flow

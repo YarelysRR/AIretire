@@ -81,22 +81,31 @@ def extract_form_data(document_result, form_fields=None):
     """Extract and validate form data from document analysis result"""
     extracted_data = {}
     
-    # Extract fields from the document
-    for field in document_result.fields.values():
-        field_name = field.name.lower()
-        if form_fields and field_name not in form_fields:
-            continue
-            
-        # Get the value and process through safety pipeline if it's text
-        value = field.value
-        if isinstance(value, str):
-            try:
-                value = process_prompt(value)
-            except ValueError as e:
-                raise ValueError(f"Safety check failed for {field_name}: {str(e)}")
-                
-        extracted_data[field_name] = value
+    # Handle case where document_result is a dictionary with 'data' key
+    if isinstance(document_result, dict):
+        data = document_result.get('data', {})
         
+        # If form_fields is specified, only extract those fields
+        if form_fields:
+            for field in form_fields:
+                if field in data:
+                    value = data[field]
+                    if isinstance(value, str):
+                        try:
+                            value = process_prompt(value)
+                        except ValueError as e:
+                            raise ValueError(f"Safety check failed for {field}: {str(e)}")
+                    extracted_data[field] = value
+        else:
+            # Extract all fields if no specific fields are requested
+            for field, value in data.items():
+                if isinstance(value, str):
+                    try:
+                        value = process_prompt(value)
+                    except ValueError as e:
+                        raise ValueError(f"Safety check failed for {field}: {str(e)}")
+                extracted_data[field] = value
+                
     return extracted_data
 
 

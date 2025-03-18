@@ -1,15 +1,50 @@
 {
   "RF-1234": {
-    "name": "ME",
-    "account_id": "RF-1234",
-    "current_beneficiary": "Jesus",
-    "new_beneficiary": "Lorena",
-    "relationship": "Hello",
-    "changes": {},
-    "old_address": "King of Prussia",
-    "new_address": "The Mill",
-    "effective_date": "10/20/2026443",
-    "address": "HO",
-    "phone": "234234",
-    "email": "message or communication@kdjeom",
-  }}
+    "key_value_pairs": {
+      "SHIPPING ADDRESS": "George Eddy 2934 Private Lane Tifton, GA 31794 229-353-8787 georgeeddy@mail.com",
+      "Order:": "#9981",
+      "Date:": "8.31.2022",
+      "BILLING ADDRESS": "George Eddy 2934 Private Lane Tifton, GA 31794 229-353-8787 georgeeddy@mail.com",
+      "Sub-Total:": "$62.76",
+      "Shipping Charge:": "$0",
+      "Promo Code:": "$10",
+      "Total:": "$52.76"
+    },
+    "tables": [
+      {
+        "rows": 4,
+        "columns": 5,
+        "cells": [
+          [
+            "PRODUCT",
+            "TYPE",
+            "QUANTITY",
+            "UNIT PRICE",
+            "TOTAL"
+          ],
+          [
+            "Life on Earth",
+            "Hardcover",
+            "1",
+            "$34.99",
+            "$34.99"
+          ],
+          [
+            "National Geographic Field Guide to the Birds of North America",
+            "Paperback",
+            "1",
+            "$15.79",
+            "$15.79"
+          ],
+          [
+            "Atomic Habits: An Easy & Proven Way to Build Good Habits & Break Bad Ones",
+            "Hardcover",
+            "1",
+            "$11.98",
+            "$11.98"
+          ]
+        ]
+      }
+    ]
+  }
+}

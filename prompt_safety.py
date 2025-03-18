@@ -68,15 +68,35 @@ def detect_harmful_content(text):
 
 
 def optimize_prompt(text):
-    """Enhance query clarity by optimizing retirement-related terms"""
+    """Enhance query clarity by optimizing terms for senior assistance"""
+    # Remove the automatic addition of "Provide detailed steps with examples"
     optimization_rules = {
+        # Health-related terms
+        r"\b(doctor)\b": "healthcare provider",
+        r"\b(medicine|meds)\b": "medication",
+        r"\b(appointment)\b": "medical appointment",
+        
+        # Technology terms
+        r"\b(internet|web)\b": "online",
+        r"\b(wifi)\b": "wireless internet",
+        r"\b(phone|cell)\b": "mobile phone",
+        
+        # Security terms
+        r"\b(spam|junk)\b": "suspicious message",
+        r"\b(scam|fraud)\b": "fraudulent activity",
+        r"\b(hack|hacked)\b": "compromised",
+        
+        # Financial terms
         r"\b(retire)\b": "retirement planning",
-        r"\b(save)\b": "long-term savings",
-        r"\b(invest)\b": "investment strategy",
-        r"\b(money)\b": "financial resources",
-        r"\b(old)\b": "senior",
-        r"\b(benefits)\b": "retirement benefits",
+        r"\b(save)\b": "savings",
+        r"\b(money)\b": "finances",
+        
+        # Social terms
+        r"\b(alone|lonely)\b": "socially isolated",
+        r"\b(connect|reach)\b": "communicate",
+        r"\b(family|relatives)\b": "family members"
     }
+    
     for pattern, replacement in optimization_rules.items():
         text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
     return text
@@ -85,10 +105,27 @@ def optimize_prompt(text):
 def suggest_alternative(prompt):
     """Generate safer alternatives for risky prompts"""
     replacements = {
+        # Personal Information
         r"\bSSN\b": "last 4 digits of SSN",
         r"\bpassword\b": "password hint",
-        r"\bbank\s+account\b": "account type (checking/savings)",
-        r"http[s]?://": "official website link",
+        r"\bbank\s+account\b": "account type",
+        r"\bcredit\s+card\b": "payment method",
+        r"\baddress\b": "city and state",
+        
+        # Health Information
+        r"\bmedical\s+record\b": "general health condition",
+        r"\bdiagnosis\b": "health concern",
+        r"\bprescription\b": "medication type",
+        
+        # Security
+        r"http[s]?://": "website name",
+        r"\blogin\b": "account access",
+        r"\bverification\b": "confirmation",
+        
+        # Financial
+        r"\binvestment\b": "savings plan",
+        r"\bwire\s+transfer\b": "payment method",
+        r"\baccount\s+number\b": "account type"
     }
 
     for pattern, replacement in replacements.items():
@@ -96,5 +133,5 @@ def suggest_alternative(prompt):
             return re.sub(pattern, replacement, prompt, flags=re.IGNORECASE)
 
     # Default suggestion
-    return f"Reformulate without sensitive details: '{prompt[:30]}...'"
+    return f"Please rephrase your question without sharing personal or sensitive information"
 
