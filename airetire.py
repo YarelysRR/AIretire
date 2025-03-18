@@ -1003,6 +1003,7 @@ def render_ai_assistant():
         st.session_state.messages.append({"role": "user", "content": text_input})
         
         try:
+            # Process the prompt with safety checks
             processed_prompt = process_prompt(text_input)
             
             with st.spinner("Thinking..."):
@@ -1011,21 +1012,35 @@ def render_ai_assistant():
             # Display the assistant's response in the chat
             st.session_state.messages.append({"role": "assistant", "content": response})
             
-            # Ensure the response is displayed before playing audio
-            st.session_state.needs_rerun = True
-            st.rerun()
+            # Handle text-to-speech if enabled
+            if st.session_state.text_to_speech_enabled:
+                try:
+                    audio_html = text_to_speech(response)
+                    if audio_html:
+                        st.markdown(audio_html, unsafe_allow_html=True)
+                        st.session_state.is_speaking = True
+                except Exception as e:
+                    st.error(f"Text-to-speech error: {e}")
             
-            # Use text-to-speech if enabled
-            if st.session_state.text_to_speech_enabled and not st.session_state.stop_speech_requested:
-                st.session_state.is_speaking = True
-                text_to_speech(response)
+            # Update UI
+            st.session_state.needs_rerun = True
 
         except ValueError as e:
             st.error(f"Safety check failed: {str(e)}")
             suggestion = suggest_alternative(text_input)
             st.info(f"Try asking instead: '{suggestion}'")
-            if st.session_state.text_to_speech_enabled and not st.session_state.stop_speech_requested:
-                text_to_speech(f"Safety check failed. Try asking instead: {suggestion}")
+            
+            # Handle text-to-speech for error message if enabled
+            if st.session_state.text_to_speech_enabled:
+                try:
+                    error_msg = f"Safety check failed. Try asking instead: {suggestion}"
+                    audio_html = text_to_speech(error_msg)
+                    if audio_html:
+                        st.markdown(audio_html, unsafe_allow_html=True)
+                except Exception as e:
+                    st.error(f"Text-to-speech error: {e}")
+            
+            st.session_state.needs_rerun = True
 
     # Handle voice input submission
     if st.session_state.current_transcription:
