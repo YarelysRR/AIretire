@@ -3,6 +3,7 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 import re
 import tldextract
+from prompt_safety import process_prompt
 
 load_dotenv()
 
@@ -80,40 +81,63 @@ def process_links(text):
     return text
 
 def get_ai_response(prompt):
-    """Get AI response with empathy, security, and link safety checks"""
-    
-    system_msg = """You're a Senior Support Assistant specializing in retirement, health, and digital security. You are a friendly, patient, and trustworthy AI assistant designed to support seniors. Always prioritize clear, simple, and empathetic communication
-    
-    Always:
-    1. Use simple, empathetic language (reading level: 6th grade)
-    2. Identify emotional cues in health/security questions
-    3. Check ALL links/emails for phishing signs
-    4. Provide actionable steps using this framework:
-       - Acknowledge concern
-       - Explain risk
-       - Suggest verification methods
-    5. Cite ONLY these official sources:
-       - Social Security Administration (ssa.gov)
-       - FTC Phishing Guidelines (consumer.ftc.gov)
-       - Medicare (medicare.gov)
-    6. Phishing detection checklist:
-        - Urgent requests for personal info
-        - Mismatched sender domains
-        - Suspicious attachments
-        - Grammar/spelling errors
-        - Unusual payment requests"""
-    
-    # Auto-detect potential phishing patterns
-    if contains_suspicious_content(prompt):
-        system_msg += "\n[ALERT: Potential phishing detected in query!]"
-    
+    """Process user input through safety pipeline and get AI response"""
     try:
+        # First process through safety pipeline
+        safe_prompt = process_prompt(prompt)
+        
+        # Auto-detect potential phishing patterns
+        if contains_suspicious_content(safe_prompt):
+            system_msg = """You're a Senior Support Assistant specializing in retirement, health, and digital security. You are a friendly, patient, and trustworthy AI assistant designed to support seniors. Always prioritize clear, simple, and empathetic communication
+            
+            Always:
+            1. Use simple, empathetic language (reading level: 6th grade)
+            2. Identify emotional cues in health/security questions
+            3. Check ALL links/emails for phishing signs
+            4. Provide actionable steps using this framework:
+               - Acknowledge concern
+               - Explain risk
+               - Suggest verification methods
+            5. Cite ONLY these official sources:
+               - Social Security Administration (ssa.gov)
+               - FTC Phishing Guidelines (consumer.ftc.gov)
+               - Medicare (medicare.gov)
+            6. Phishing detection checklist:
+                - Urgent requests for personal info
+                - Mismatched sender domains
+                - Suspicious attachments
+                - Grammar/spelling errors
+                - Unusual payment requests
+            
+            [ALERT: Potential phishing detected in query!]"""
+        else:
+            system_msg = """You're a Senior Support Assistant specializing in retirement, health, and digital security. You are a friendly, patient, and trustworthy AI assistant designed to support seniors. Always prioritize clear, simple, and empathetic communication
+            
+            Always:
+            1. Use simple, empathetic language (reading level: 6th grade)
+            2. Identify emotional cues in health/security questions
+            3. Check ALL links/emails for phishing signs
+            4. Provide actionable steps using this framework:
+               - Acknowledge concern
+               - Explain risk
+               - Suggest verification methods
+            5. Cite ONLY these official sources:
+               - Social Security Administration (ssa.gov)
+               - FTC Phishing Guidelines (consumer.ftc.gov)
+               - Medicare (medicare.gov)
+            6. Phishing detection checklist:
+                - Urgent requests for personal info
+                - Mismatched sender domains
+                - Suspicious attachments
+                - Grammar/spelling errors
+                - Unusual payment requests"""
+        
         # Step 1: Get AI response using Gemini
         model = genai.GenerativeModel('gemini-1.5-pro')
         chat = model.start_chat(history=[])
         
         # With Gemini, we combine system and user messages
-        combined_prompt = f"{system_msg}\n\nUser query: {prompt}"
+        combined_prompt = f"{system_msg}\n\nUser query: {safe_prompt}"
         response = chat.send_message(combined_prompt)
         
         # Extract raw response text
@@ -127,6 +151,8 @@ def get_ai_response(prompt):
         
         return safe_response
     
+    except ValueError as e:
+        # Return safety warning to user
+        return str(e)
     except Exception as e:
-        print(f"AI Response Error: {e}")
-        return "Sorry, I found an error. Please try again later."
+        return f"An error occurred: {str(e)}"
