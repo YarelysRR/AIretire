@@ -2,6 +2,7 @@ import os
 import azure.cognitiveservices.speech as speechsdk
 from dotenv import load_dotenv
 import base64
+from prompt_safety import process_prompt
 
 load_dotenv()
 
@@ -51,8 +52,22 @@ def speech_to_text():
         recognizer = speechsdk.SpeechRecognizer(
             speech_config=speech_config, audio_config=audio_config
         )
-        result = recognizer.recognize_once_async().get()
-        return result.text
+        
+        # Use recognize_once instead of recognize_once_async for better control
+        result = recognizer.recognize_once()
+        
+        if result.text:
+            # Process the recognized text through safety pipeline
+            try:
+                safe_text = process_prompt(result.text)
+                return safe_text
+            except ValueError as e:
+                # Convert safety warning to speech
+                warning = f"Safety Alert: {str(e)}"
+                text_to_speech(warning)
+                return warning
+        return ""
+            
     except Exception as e:
         print(f"Speech Recognition Error: {e}")
         return ""

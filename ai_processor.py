@@ -1,17 +1,13 @@
 import os
+import google.generativeai as genai
 from dotenv import load_dotenv
-from openai import AzureOpenAI
 import re
 import tldextract
 
 load_dotenv()
 
-# Initialize Azure OpenAI client
-client = AzureOpenAI(
-    azure_endpoint=os.environ.get("AZURE_OPENAI_ENDPOINT"),
-    api_key=os.environ.get("AZURE_OPENAI_API_KEY"),
-    api_version="2024-02-01", 
-)
+# Initialize GeminiAPI
+genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
 
 # Define trusted domains at the top
 TRUSTED_DOMAINS = {
@@ -22,6 +18,11 @@ TRUSTED_DOMAINS = {
     "aarp.org",  # Trusted senior organization
     "usa.gov",  # Official US government
     "myretirement.gov",  # (Example fictional trusted domain)
+    "CDC.gov" # Centers for Disease Control and Prevention
+    "Medicare.gov" # Official Medicare
+    "NIH.gov" # National Institutes of Health
+    "WHO.int" # World Health Organization
+    "FTC.gov" # Federal Trade Commission
 }
 
 
@@ -80,8 +81,9 @@ def process_links(text):
 
 def get_ai_response(prompt):
     """Get AI response with empathy, security, and link safety checks"""
-
-    system_msg = """You're a Senior Support Assistant specializing in retirement, health, and digital security. 
+    
+    system_msg = """You're a Senior Support Assistant specializing in retirement, health, and digital security. You are a friendly, patient, and trustworthy AI assistant designed to support seniors. Always prioritize clear, simple, and empathetic communication
+    
     Always:
     1. Use simple, empathetic language (reading level: 6th grade)
     2. Identify emotional cues in health/security questions
@@ -100,33 +102,31 @@ def get_ai_response(prompt):
         - Suspicious attachments
         - Grammar/spelling errors
         - Unusual payment requests"""
-
+    
     # Auto-detect potential phishing patterns
     if contains_suspicious_content(prompt):
         system_msg += "\n[ALERT: Potential phishing detected in query!]"
-
+    
     try:
-        # Step 1: Get AI response
-        response = client.chat.completions.create(
-            model= os.environ.get("AZURE_OPENAI_MODEL"), # model = "deployment_name".
-            messages=[
-                {"role": "system", "content": system_msg},
-                {"role": "user", "content": prompt},
-            ],
-            temperature=0.3,
-        )
-
-        # Step 2: Extract raw response text
-        raw_response = response.choices[0].message.content
-
+        # Step 1: Get AI response using Gemini
+        model = genai.GenerativeModel('gemini-1.5-pro')
+        chat = model.start_chat(history=[])
+        
+        # With Gemini, we combine system and user messages
+        combined_prompt = f"{system_msg}\n\nUser query: {prompt}"
+        response = chat.send_message(combined_prompt)
+        
+        # Extract raw response text
+        raw_response = response.text
+        
         # Step 3: Apply empathy enhancements
         empathetic_response = add_empathy_enhancements(raw_response)
-
+        
         # Step 4: Apply link safety checks
         safe_response = process_links(empathetic_response)
-
+        
         return safe_response
-
+    
     except Exception as e:
         print(f"AI Response Error: {e}")
-        return "Sorry, I encountered an error. Please try again later."
+        return "Sorry, I found an error. Please try again later."

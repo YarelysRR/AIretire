@@ -1,17 +1,28 @@
 # Description: This is the main application file for the AIretire application. It contains the Streamlit code for the user interface and application logic.
 import os
 import base64
-from datetime import datetime
-
 import streamlit as st
+
+from dotenv import load_dotenv
+from datetime import datetime
+import google.generativeai as genai
 
 from document_processor import process_document
 from document_quality import check_image_quality
-from voice_assistant import text_to_speech
-from form_manager import extract_form_data,save_user_data,get_autocomplete_data,auto_correct_form_data,validate_form_data
+from voice_assistant import text_to_speech, speech_to_text
+from form_manager import (
+    extract_form_data,
+    save_user_data,
+    get_autocomplete_data,
+    auto_correct_form_data,
+    validate_form_data,
+)
 from mock_data import mock_users, fraud_db, form_templates, format_balance
 from prompt_safety import suggest_alternative, process_prompt
 from ai_processor import get_ai_response
+
+load_dotenv()
+genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
 
 # Initialize session state
 if "verified_user" not in st.session_state:
@@ -556,22 +567,6 @@ def render_dashboard():
 
 def render_form_filling():
     # In render_form_filling():
-    st.markdown(
-        f"""
-        <div class='step-indicator'>
-        Step 1 of 2: Providing Personal Information
-        </div>
-        <style>
-        .step-indicator {{
-        font-size: {st.session_state.font_size+2}px;
-        color: var(--primary);
-        margin-bottom: 1rem;
-        font-weight: bold;
-    }}
-    </style>
-    """,
-        unsafe_allow_html=True,
-    )
 
     if not st.session_state.verified_user:
         display_error("Please login first.")
@@ -783,58 +778,67 @@ def render_form_filling():
     with col2:
         if st.button("Submit Form", use_container_width=True):
             if st.session_state.form_submission_in_progress:
-                display_error("Submission already in progress", speak=False)
-        else:
-            st.session_state.form_submission_in_progress = True
-            st.session_state.error_message_shown = False  # Reset error state
+                with st.spinner("Submitting form, please wait..."):
+                    display_error("Submission already in progress", speak=False)
+            else:
+                st.session_state.form_submission_in_progress = True
+                st.session_state.error_message_shown = False  # Reset error state
 
-            try:
-                # First check if we have any data to submit
-                if any(form_data.values()):
-                    # Auto-correct inputs before validation
-                    corrected_data = auto_correct_form_data(form_data)
+                try:
+                    # First check if we have any data to submit
+                    if any(form_data.values()):
+                        # Auto-correct inputs before validation
+                        corrected_data = auto_correct_form_data(form_data)
 
-                    # Debug log
-                    print(f"Validating form data: {corrected_data}")
+                        # Debug log
+                        print(f"Validating form data: {corrected_data}")
 
-                    # Validate corrected data
-                    is_valid, errors = validate_form_data(corrected_data, form_template["fields"])
+                        # Validate corrected data
+                        is_valid, errors = validate_form_data(
+                            corrected_data, form_template["fields"]
+                        )
 
-                    if is_valid:
-                        # Show corrections to user if any
-                        if 'changes' in corrected_data and corrected_data['changes']:
-                            display_info("We made these corrections: " + str(corrected_data.get('changes', {})))
-
-                        # Save the corrected data
-                        save_user_data(user["account_id"], corrected_data)
-                        display_success("Form submitted successfully!")
-
-                        # Submission summary
-                        st.subheader("Submission Summary")
-                        st.markdown("<table style='width:100%; border-collapse: collapse;'>", unsafe_allow_html=True)
-                        for key, value in corrected_data.items():
-                            if key != "account_id" and key != "changes":
-                                field_name = key.replace("_", " ").title()
-                                st.markdown(
-                                    f"<tr><td style='padding:8px; border:1px solid #ddd; font-weight:bold;'>{field_name}</td>"
-                                    f"<td style='padding:8px; border:1px solid #ddd;'>{value}</td></tr>",
-                                    unsafe_allow_html=True,
+                        if is_valid:
+                            # Show corrections to user if any
+                            if "changes" in corrected_data and corrected_data["changes"]:
+                                display_info(
+                                    "We made these corrections: "
+                                    + str(corrected_data.get("changes", {}))
                                 )
-                        st.markdown("</table>", unsafe_allow_html=True)
 
-                        if st.button("Return to Dashboard", use_container_width=True):
-                            navigate_to("dashboard")
+                            # Save the corrected data
+                            save_user_data(user["account_id"], corrected_data)
+                            display_success("Form submitted successfully!")
+
+                            # Submission summary
+                            st.subheader("Submission Summary")
+                            st.markdown(
+                                "<table style='width:100%; border-collapse: collapse;'>",
+                                unsafe_allow_html=True,
+                            )
+                            for key, value in corrected_data.items():
+                                if key != "account_id" and key != "changes":
+                                    field_name = key.replace("_", " ").title()
+                                    st.markdown(
+                                        f"<tr><td style='padding:8px; border:1px solid #ddd; font-weight:bold;'>{field_name}</td>"
+                                        f"<td style='padding:8px; border:1px solid #ddd;'>{value}</td></tr>",
+                                        unsafe_allow_html=True,
+                                    )
+                            st.markdown("</table>", unsafe_allow_html=True)
+
+                            if st.button("Return to Dashboard", use_container_width=True):
+                                navigate_to("dashboard")
+                        else:
+                            # Display each validation error
+                            for error in errors:
+                                display_error(error)
                     else:
-                        # Display each validation error
-                        for error in errors:
-                            display_error(error)
-                else:
-                    display_error("Please fill out the form before submitting.")
-            finally:
-                # Ensure flag is reset whether success/failure
-                st.session_state.form_submission_in_progress = False
-                st.rerun()  # To update UI
-    
+                        display_error("Please fill out the form before submitting.")
+                finally:
+                    # Ensure flag is reset whether success/failure
+                    st.session_state.form_submission_in_progress = False
+                    st.rerun()  # To update UI
+
     st.markdown("</div>", unsafe_allow_html=True)
 
     # Help panel
@@ -850,35 +854,188 @@ def render_form_filling():
 # Add to AIretire.py
 def render_ai_assistant():
     st.markdown(
-        "<h2 style='text-align: center;'>AI Retirement Assistant</h2>",
+        "<h2 style='text-align: center;'>Trusted Companion</h2>",
         unsafe_allow_html=True,
     )
 
-    # Initialize chat history
+    # Add help text right after title, centered and compact
+    _, col2, _ = st.columns([1, 2, 1])  # Use columns for centering
+    with col2:
+        st.markdown("""
+            <div style='
+                margin: 1rem auto;
+                padding: 1rem;
+                border-radius: 0.5rem;
+                background-color: #1b5e8a;
+                color: white;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                text-align: left;
+                max-width: 500px;
+            '>
+                <h4 style='margin: 0; color: white; font-size: 1.1rem;'>💡 Quick Tips:</h4>
+                <ul style='margin: 0.5rem 0; font-size: 1rem; line-height: 1.4; padding-left: 1.5rem;'>
+                    <li>Click 🎤 to start speaking</li>
+                    <li>Click 🔴 to stop recording</li>
+                    <li>Review and click ✅ Submit</li>
+                </ul>
+            </div>
+        """, unsafe_allow_html=True)
+
+    # Initialize chat history and voice control states
     if "messages" not in st.session_state:
         st.session_state.messages = []
-
+    if "is_recording" not in st.session_state:
+        st.session_state.is_recording = False
+    if "current_transcription" not in st.session_state:
+        st.session_state.current_transcription = ""
+    if "is_speaking" not in st.session_state:
+        st.session_state.is_speaking = False
+    if "stop_speech_requested" not in st.session_state:
+        st.session_state.stop_speech_requested = False
+    if "voice_input_ready" not in st.session_state:
+        st.session_state.voice_input_ready = False
+    
     # Display chat messages
     for msg in st.session_state.messages:
         st.chat_message(msg["role"]).write(msg["content"])
+        # Add stop speaking button for assistant messages
+        if msg["role"] == "assistant" and st.session_state.text_to_speech_enabled:
+            if st.session_state.is_speaking:
+                if st.button("🔇 Stop Reading", key=f"stop_{len(st.session_state.messages)}"):
+                    st.session_state.stop_speech_requested = True
+                    st.session_state.is_speaking = False
+                    st.rerun()
 
-    # Process input
-    if prompt := st.chat_input("Ask me about retirement planning..."):
+    # Create input container with improved layout
+    input_container = st.container()
+    
+    with input_container:
+        col1, col2 = st.columns([6, 1])
+        
+        with col1:
+            text_input = st.chat_input(
+                "Type your message or click the microphone to speak",
+                key="chat_input"
+            )
+        
+        with col2:
+            # Dynamic microphone button based on state
+            if not st.session_state.is_recording:
+                mic_button = st.button("🎤", help="Click to start speaking", key="start_mic")
+                if mic_button:
+                    st.session_state.is_recording = True
+                    st.session_state.stop_speech_requested = True  # Stop any ongoing speech
+            else:
+                stop_button = st.button("🔴 Stop", help="Click to stop recording", key="stop_mic")
+                if stop_button:
+                    st.session_state.is_recording = False
+                    st.session_state.stop_speech_requested = True  # Stop any ongoing speech
+
+    # Handle recording state and show feedback
+    if st.session_state.is_recording:
+        # Create a container for recording feedback
+        feedback_container = st.container()
+        
+        with feedback_container:
+            st.markdown("""
+                <div style='padding: 1rem; border-radius: 0.5rem; background-color: #d32f2f; margin: 1rem 0;'>
+                    <p style='color: white; margin: 0; font-size: 1.2rem; font-weight: bold;'>
+                        🎙️ Recording... Click 'Stop' when finished
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            # Start recording and show real-time transcription
+            with st.spinner("Listening..."):
+                try:
+                    voice_input = speech_to_text()
+                    if voice_input:
+                        st.session_state.current_transcription = voice_input
+                        st.markdown(f"""
+                            <div style='padding: 1rem; border-radius: 0.5rem; background-color: #1976d2; margin: 1rem 0;'>
+                                <p style='color: white; margin: 0; font-size: 1.1rem;'>You said:</p>
+                                <p style='color: white; margin: 0.5rem 0 0 0; font-size: 1.2rem; font-weight: bold;'>
+                                    "{voice_input}"
+                                </p>
+                            </div>
+                        """, unsafe_allow_html=True)
+                        
+                        # Add submit and cancel buttons with improved visibility
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            submit_button = st.button("✅ Submit", use_container_width=True, key="submit_voice")
+                            if submit_button and not st.session_state.submission_in_progress:
+                                try:
+                                    st.session_state.submission_in_progress = True
+                                    
+                                    # First stop recording
+                                    st.session_state.is_recording = False
+                                    
+                                    # Process the voice input
+                                    processed_prompt = process_prompt(voice_input)
+                                    st.session_state.messages.append({"role": "user", "content": voice_input})
+                                    
+                                    with st.spinner("Thinking..."):
+                                        response = get_ai_response(processed_prompt)
+                                    
+                                    st.session_state.messages.append({"role": "assistant", "content": response})
+                                    if st.session_state.text_to_speech_enabled and not st.session_state.stop_speech_requested:
+                                        st.session_state.is_speaking = True
+                                        text_to_speech(response)
+                                    
+                                    # Reset all states
+                                    st.session_state.current_transcription = ""
+                                    st.session_state.stop_speech_requested = False
+                                    
+                                except ValueError as e:
+                                    st.error(f"Safety check failed: {str(e)}")
+                                    suggestion = suggest_alternative(voice_input)
+                                    st.info(f"Try asking instead: '{suggestion}'")
+                                    if st.session_state.text_to_speech_enabled and not st.session_state.stop_speech_requested:
+                                        text_to_speech(f"Safety check failed. Try asking instead: {suggestion}")
+                                except Exception as e:
+                                    st.error(f"Error processing voice input: {str(e)}")
+                                    st.session_state.is_recording = False
+                                    st.session_state.current_transcription = ""
+                                finally:
+                                    st.session_state.submission_in_progress = False
+                                    st.rerun()  # Force UI update after state changes
+                        
+                        with col2:
+                            cancel_button = st.button("❌ Cancel", use_container_width=True, key="cancel_voice")
+                            if cancel_button:
+                                # Reset all states
+                                st.session_state.is_recording = False
+                                st.session_state.current_transcription = ""
+                                st.session_state.stop_speech_requested = True
+                                st.session_state.submission_in_progress = False
+                                st.rerun()  # Force UI update after state changes
+                except Exception as e:
+                    st.error(f"Error during voice recording: {str(e)}")
+                    st.session_state.is_recording = False
+                    st.session_state.current_transcription = ""
+
+    # Handle text input
+    if text_input:
         try:
-            processed_prompt = process_prompt(prompt)
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            st.chat_message("user").write(prompt)
-
-            with st.spinner("Analyzing..."):
+            processed_prompt = process_prompt(text_input)
+            st.session_state.messages.append({"role": "user", "content": text_input})
+            
+            with st.spinner("Thinking..."):
                 response = get_ai_response(processed_prompt)
-
+            
             st.session_state.messages.append({"role": "assistant", "content": response})
-            st.chat_message("assistant").write(response)
+            if st.session_state.text_to_speech_enabled and not st.session_state.stop_speech_requested:
+                st.session_state.is_speaking = True
+                text_to_speech(response)
+            st.rerun()
 
         except ValueError as e:
             st.error(f"Safety check failed: {str(e)}")
-            suggestion = suggest_alternative(prompt)
+            suggestion = suggest_alternative(text_input)
             st.info(f"Try asking instead: '{suggestion}'")
+            if st.session_state.text_to_speech_enabled and not st.session_state.stop_speech_requested:
+                text_to_speech(f"Safety check failed. Try asking instead: {suggestion}")
 
 
 # Main Application Flow

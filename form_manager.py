@@ -5,6 +5,8 @@ import difflib
 from azure.ai.contentsafety import ContentSafetyClient
 from azure.core.credentials import AzureKeyCredential
 from helpers import clean_and_format_phone
+from prompt_safety import process_prompt
+from safety_utils import detect_sensitive_data
 
 
 # Store extracted data in a simple JSON file (in a real app, use a database)
@@ -31,6 +33,18 @@ def load_user_data():
 def save_user_data(user_id, data):
     """Save user data to file"""
     global _user_data_cache
+    
+    # Process each text field through safety pipeline
+    safe_data = {}
+    for key, value in data.items():
+        if isinstance(value, str):
+            try:
+                safe_data[key] = process_prompt(value)
+            except ValueError as e:
+                raise ValueError(f"Safety check failed for {key}: {str(e)}")
+        else:
+            safe_data[key] = value
+    
     if _user_data_cache is None:
         _user_data_cache = load_user_data()
     all_data = _user_data_cache
@@ -38,7 +52,7 @@ def save_user_data(user_id, data):
     # Create or update user entry
     if user_id not in all_data:
         all_data[user_id] = {}
-    all_data[user_id].update(data)
+    all_data[user_id].update(safe_data)
 
     with open(USER_DATA_FILE, "w") as f:
         json.dump(all_data, f, indent=2)
@@ -64,57 +78,26 @@ def get_autocomplete_data(user_id, form_fields):
 
 
 def extract_form_data(document_result, form_fields=None):
-    """Extract structured data from document analysis result"""
+    """Extract and validate form data from document analysis result"""
     extracted_data = {}
-
-    key_value_pairs = document_result.get("data", {}).get("key_value_pairs", {})
-
-    field_mapping = {
-        "name": ["name", "full name", "applicant name"],
-        "address": ["address", "home address", "mailing address", "residence"],
-        "phone": ["phone", "telephone", "contact number", "phone number"],
-        "email": ["email", "email address", "e-mail"],
-        "dob": ["date of birth", "dob", "birth date"],
-        "ssn": ["ssn", "social security", "social security number"],
-        "income": ["income", "annual income", "monthly income"],
-        "account_id": ["account id", "account number", "retirement account"],
-    }
-
-    for standard_key, possible_matches in field_mapping.items():
-        possible_matches_set = set(possible_matches)
-        for key, value in key_value_pairs.items():
-            key_lower = key.lower()
-            if any(match in key_lower for match in possible_matches_set):
-                extracted_value = value
-                # Phone formatting centralized
-                if standard_key == "phone":
-                    extracted_value = clean_and_format_phone(extracted_value)
-                break
-
-    # Optional form field filtering
-    if form_fields:
-        extracted_data = {k: v for k, v in extracted_data.items() if k in form_fields}
-
-    return extracted_data
-
-
-def detect_sensitive_data(text):
-    """Detect sensitive data using Azure Content Safety API"""
-    try:
-        endpoint = os.getenv("CONTENT_SAFETY_ENDPOINT")
-        key = os.getenv("CONTENT_SAFETY_KEY")
-        if not endpoint or not key:
-            raise ValueError(
-                "CONTENT_SAFETY_ENDPOINT or CONTENT_SAFETY_KEY environment variable is not set."
-            )
-        client = ContentSafetyClient(endpoint, AzureKeyCredential(key))
+    
+    # Extract fields from the document
+    for field in document_result.fields.values():
+        field_name = field.name.lower()
+        if form_fields and field_name not in form_fields:
+            continue
+            
+        # Get the value and process through safety pipeline if it's text
+        value = field.value
+        if isinstance(value, str):
+            try:
+                value = process_prompt(value)
+            except ValueError as e:
+                raise ValueError(f"Safety check failed for {field_name}: {str(e)}")
+                
+        extracted_data[field_name] = value
         
-        options = {}
-        response = client.analyze_text(text=str(text), categories=["PII"], options=options)
-        return response.pii_results.identified
-    except Exception as e:
-        print(f"Content Safety API error: {e}")
-        return False  # Default to false on error
+    return extracted_data
 
 
 def auto_correct_form_data(form_data):
@@ -153,17 +136,23 @@ def auto_correct_form_data(form_data):
     return corrected_data
 
 
-def validate_form_data(form_data, form_fields):
+def validate_form_data(form_data, form_fields, check_required=True):
     """
     Validates user inputs against form requirements.
     Returns: (is_valid, error_messages)
+    
+     Parameters:
+    - form_data: The data to validate
+    - form_fields: The fields required in the form
+    - check_required: Only check for required fields if True (default)
     """
     errors = []
 
     # 1. Check required fields
-    for field in form_fields:
-        if field not in form_data or not form_data.get(field):
-            errors.append(f"Missing required field: {field.replace('_', ' ').title()}")
+    if check_required:
+        for field in form_fields:
+            if field not in form_data or not form_data.get(field):
+                errors.append(f"Missing required field: {field.replace('_', ' ').title()}")
 
     # 2. Validate date format for DOB
     if "dob" in form_data and form_data["dob"]:
