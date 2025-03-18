@@ -1,0 +1,13 @@
+{
+  "RF-1234": {
+    "name": "Alberto Meloni",
+    "account_id": "RF-1234",
+    "current_beneficiary": "Jesusa",
+    "new_beneficiary": "Lorena",
+    "relationship": "Step Daughter",
+    "changes": {},
+    "old_address": "King of Prussia",
+    "new_address": "The Mill",
+    "effective_date": "10/20/202"
+  }
+}

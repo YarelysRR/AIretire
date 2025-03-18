@@ -1,104 +1,110 @@
+# Description: This is the main application file for the AIretire application. It contains the Streamlit code for the user interface and application logic.
+import os
+import base64
+from datetime import datetime
+
 import streamlit as st
+
 from document_processor import process_document
 from document_quality import check_image_quality
 from voice_assistant import text_to_speech
-from form_manager import extract_form_data, save_user_data, get_autocomplete_data
-from mock_data import mock_users, fraud_db, form_templates
-from gtts import gTTS
-import os
-import base64
+from form_manager import extract_form_data,save_user_data,get_autocomplete_data,auto_correct_form_data,validate_form_data
+from mock_data import mock_users, fraud_db, form_templates, format_balance
+from prompt_safety import suggest_alternative, process_prompt
+from ai_processor import get_ai_response
 
 # Initialize session state
-if 'verified_user' not in st.session_state:
+if "verified_user" not in st.session_state:
     st.session_state.verified_user = None
-if 'current_page' not in st.session_state:
+if "current_page" not in st.session_state:
     st.session_state.current_page = "login"
-if 'extracted_form_data' not in st.session_state:
+if "extracted_form_data" not in st.session_state:
     st.session_state.extracted_form_data = {}
-if 'current_form' not in st.session_state:
+if "current_form" not in st.session_state:
     st.session_state.current_form = None
-if 'font_size' not in st.session_state:
+if "font_size" not in st.session_state:
     st.session_state.font_size = 18
-if 'high_contrast' not in st.session_state:
+if "high_contrast" not in st.session_state:
     st.session_state.high_contrast = False
+if "audio_played" not in st.session_state:
+    st.session_state.audio_played = False
+if "success_message_shown" not in st.session_state:
+    st.session_state.success_message_shown = False
+if "error_message_shown" not in st.session_state:
+    st.session_state.error_message_shown = False
+if "info_message_shown" not in st.session_state:
+    st.session_state.info_message_shown = False
+if "dashboard_audio_played" not in st.session_state:
+    st.session_state.dashboard_audio_played = False
+if "text_to_speech_enabled" not in st.session_state:
+    st.session_state.text_to_speech_enabled = True  # Default to enabled
+if "show_upload" not in st.session_state:
+    st.session_state.show_upload = False
+if "form_submission_in_progress" not in st.session_state:
+    st.session_state.form_submission_in_progress = False
+if "welcome_message_played" not in st.session_state:
+    st.session_state.welcome_message_played = False
+
 
 # Set page configuration
 st.set_page_config(
     page_title="AIretire: Senior Account Access",
     page_icon=":guardsman:",
-    layout="wide",
-    initial_sidebar_state="collapsed"  # Start with sidebar collapsed for simplicity
+    # Start with sidebar collapsed for simplicity
+    initial_sidebar_state="collapsed",
 )
+
 
 # Apply custom CSS for senior-friendly design
 def apply_custom_styling():
-    contrast_bg = "#000" if st.session_state.high_contrast else "#f8f9fa"
-    contrast_text = "#fff" if st.session_state.high_contrast else "#333"
-    contrast_button_bg = "#fff" if st.session_state.high_contrast else "#3498db"
-    contrast_button_text = "#000" if st.session_state.high_contrast else "#fff"
-    contrast_border = "#fff" if st.session_state.high_contrast else "#bdc3c7"
+    # Get current settings from session state
+    contrast_bg = (
+        "#000" if st.session_state.high_contrast else "#ffffff"
+    )  # Pure white background
+    contrast_text = (
+        "#fff" if st.session_state.high_contrast else "#e0e0e0"
+    )  # Dark text color
+    text_size = st.session_state.font_size
 
     st.markdown(
         f"""
         <style>
-        /* Professional color palette */
+        /* Base styles */
         :root {{
             --primary: #1b5e8a;
-            --primary-light: #2a7cb3;
-            --secondary: #3d9970;
-            --background: {contrast_bg};
-            --card-bg: #ffffff;
+            --text-size: {text_size}px;
             --text: {contrast_text};
-            --text-light: #6c757d;
-            --border: {contrast_border};
-            --error: #dc3545;
-            --success: #28a745;
-            --info: #17a2b8;
+            --background: {contrast_bg};
+            --button-bg: #1b5e8a;
+            --button-bg-contrast: #fff;
         }}
 
-        /* Responsive container */
-        .container {{
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 15px;
-            width: 100%;
+        /* Apply text size globally */
+        p, .stTextInput>div>div>input, .stButton>button, .stMarkdown {{
+            font-size: var(--text-size) !important;
+        }}
+
+        /* High-contrast overrides */
+        .stButton>button {{
+            background-color: var(--button-bg);
+            color: var(--button-text);
+        }}
+        
+        
+
+        /* Fix help text visibility */
+        .stFileUploader .stAlert, .stMarkdown {{
+            color: var(--text) !important;
         }}
 
         /* Card component */
         .card {{
-            background-color: var(--card-bg);
+            background-color: var(--background);
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
             padding: 1.5rem;
             margin-bottom: 1.5rem;
-            border: 1px solid var(--border);
-        }}
-
-        /* Button styling */
-        .stButton>button {{
-            background-color: var(--primary);
-            color: white;
-            border: none;
-            border-radius: 4px;
-            padding: 15px 30px;
-            font-size: {st.session_state.font_size}px;
-            font-weight: 500;
-            transition: background-color 0.3s;
-            max-width: 300px;
-        }}
-
-        .stButton>button:hover {{
-            background-color: var(--primary-light);
-        }}
-
-        /* Form controls */
-        .stTextInput>div>div>input,
-        .stNumberInput>div>div>input,
-        .stDateInput>div>div>input {{
-            font-size: {st.session_state.font_size}px;
-            padding: 15px;
-            border: 1px solid var(--border);
-            border-radius: 4px;
+            border: 1px solid #ddd;
         }}
 
         /* Typography */
@@ -120,12 +126,6 @@ def apply_custom_styling():
             font-weight: 500;
         }}
 
-        p {{
-            font-size: {st.session_state.font_size}px;
-            color: var(--text);
-            line-height: 1.6;
-        }}
-
         /* Responsive grid */
         @media (max-width: 768px) {{
             .hide-mobile {{
@@ -140,90 +140,123 @@ def apply_custom_styling():
         unsafe_allow_html=True,
     )
 
+
 apply_custom_styling()
 
-# Function for speech interaction
-def text_to_speech(message):
-    tts = gTTS(text=message, lang='en')
-    tts.save("temp_audio.mp3")
-    with open("temp_audio.mp3", "rb") as audio_file:
-        audio_bytes = audio_file.read()
-    audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
-    audio_html = f"""
-    <audio autoplay>
-    <source src="data:audio/mp3;base64,{audio_base64}" type="audio/mp3">
-    Your browser does not support the audio element.
-    </audio>
-    """
-    st.markdown(audio_html, unsafe_allow_html=True)
 
 # Navigation Control
 def navigate_to(page_name):
     st.session_state.current_page = page_name
+    # Reset message flags only if they are True
+    if st.session_state.success_message_shown:
+        st.session_state.success_message_shown = False
+    if st.session_state.error_message_shown:
+        st.session_state.error_message_shown = False
+    if st.session_state.info_message_shown:
+        st.session_state.info_message_shown = False
     if page_name != "form_filling":
         st.session_state.current_form = None
 
+
 # Display Top Navigation Bar
 def display_navigation():
-    st.markdown("<div class='navigation-bar'>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns(3)
+    button_state = st.session_state.verified_user is None
+
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         if st.button("Login", key="nav_login", use_container_width=True):
             navigate_to("login")
 
     with col2:
-        button_state = st.session_state.verified_user is None
-        if st.button("Dashboard", key="nav_dashboard", disabled=button_state, use_container_width=True):
+        if st.button(
+            "Dashboard",
+            key="nav_dashboard",
+            disabled=button_state,
+            use_container_width=True,
+        ):
             navigate_to("dashboard")
 
     with col3:
         button_state = st.session_state.verified_user is None
-        if st.button("Forms", key="nav_forms", disabled=button_state, use_container_width=True):
+        if st.button(
+            "Forms", key="nav_forms", disabled=button_state, use_container_width=True
+        ):
             navigate_to("form_filling")
+
+    with col4:
+        if st.button(
+            "AI Assistant",
+            disabled=button_state,
+            key="nav_ai",
+            use_container_width=True,
+        ):
+            navigate_to("ai_assistant")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
+
 # Display Success, Error, and Info Messages with custom styling
 def display_success(message, speak=True):
-    st.markdown(
-        f"""
-        <div style='
+    if not st.session_state.success_message_shown:
+        st.session_state.success_message_shown = True
+
+        st.markdown(
+            f"""
+            <div style='
             background-color: #e8f5e9;
             color: #2e7d32;
             padding: 15px;
             border-radius: 5px;
             margin-bottom: 20px;
             font-size: {st.session_state.font_size}px;
-        '>
+            '>
             {message}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    if speak:
-        text_to_speech(f"Success: {message}")
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        if speak and st.session_state.text_to_speech_enabled:
+            try:
+                audio_html = text_to_speech(f"Success: {message}")
+                if audio_html is not None:
+                    st.markdown(audio_html, unsafe_allow_html=True)
+            except Exception as e:
+                st.error(f"Error in text-to-speech: {e}")
+
 
 def display_error(message, speak=True):
-    st.markdown(
-        f"""
-        <div style='
+    if not st.session_state.error_message_shown:
+        st.session_state.error_message_shown = True
+        st.markdown(
+            f"""
+            <div style='
             background-color: #ffebee;
             color: #c62828;
             padding: 15px;
             border-radius: 5px;
             margin-bottom: 20px;
             font-size: {st.session_state.font_size}px;
-        '>
+            '>
             {message}
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-    if speak:
-        text_to_speech(f"Error: {message}")
-        
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+        try:
+            audio_html = text_to_speech(f"Error: {message}")
+            if audio_html is not None:
+                st.markdown(audio_html, unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Error in text-to-speech: {e}")
+
+
 def display_info(message, speak=True):
+    if not st.session_state.info_message_shown:
+        st.session_state.info_message_shown = True
+
     st.markdown(
         f"""
         <div style='
@@ -234,18 +267,26 @@ def display_info(message, speak=True):
             margin-bottom: 20px;
             font-size: {st.session_state.font_size}px;
         '>
-            {message}
+        {message}
         </div>
         """,
-        unsafe_allow_html=True,
     )
-    if speak:
-        text_to_speech(f"Info: {message}")
+    if speak and st.session_state.text_to_speech_enabled:
+        try:
+            audio_html = text_to_speech(f"Info: {message}")
+            if audio_html is not None:
+                st.markdown(audio_html, unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Error in text-to-speech: {e}")
+        unsafe_allow_html = (True,)
+
 
 # Accessibility Controls in Sidebar
 def display_accessibility_controls():
     with st.sidebar:
         st.header("Accessibility Settings")
+
+        rerun_needed = False
 
         # Font size control
         new_font_size = st.slider(
@@ -253,63 +294,89 @@ def display_accessibility_controls():
             min_value=16,
             max_value=28,
             value=st.session_state.font_size,
-            step=2
+            step=2,
         )
         if new_font_size != st.session_state.font_size:
             st.session_state.font_size = new_font_size
-            st.rerun()
+            rerun_needed = True
 
         # High contrast mode
         high_contrast = st.checkbox(
-            "High Contrast Mode",
-            value=st.session_state.high_contrast
+            "High Contrast Mode", value=st.session_state.high_contrast
         )
         if high_contrast != st.session_state.high_contrast:
             st.session_state.high_contrast = high_contrast
-            st.rerun()
+            rerun_needed = True
 
-        # Text-to-speech on/off toggle
-        st.checkbox("Text-to-Speech", value=True, help="Enable voice feedback")
+        # Text-to-speech on/off toggle - store the state
+        text_to_speech_enabled = st.checkbox(
+            "Text-to-Speech",
+            value=st.session_state.text_to_speech_enabled,
+            help="Enable Text-to-Speech feedback",
+        )
+        if text_to_speech_enabled != st.session_state.text_to_speech_enabled:
+            st.session_state.text_to_speech_enabled = text_to_speech_enabled
+            rerun_needed = True
+
+        if rerun_needed:
+            st.rerun()
 
         # Instructions
         st.markdown("---")
         st.subheader("Need Help?")
         st.write("Call our support line: 1-800-555-0123")
 
+
 # Login Page
 def render_login_page():
-    st.markdown("<h2 style='text-align: center;'>Account Verification</h2>", unsafe_allow_html=True)
+    st.markdown(
+        "<h2 style='text-align: center;'>Account Verification</h2>",
+        unsafe_allow_html=True,
+    )
 
     # Main login panel
     st.markdown("<div class='panel'>", unsafe_allow_html=True)
-    
+
     # Center the uploader and instructions
-    col1, col2, col3 = st.columns([1, 2, 1])
+    _, col2, _ = st.columns([1, 2, 1])
     with col2:
-        st.markdown("<p class='instruction' style='text-align: center;'>Please upload a clear photo of your Account ID for verification.</p>", unsafe_allow_html=True)
-        uploaded_file = st.file_uploader("Upload Account ID", type=["jpg", "png", "jpeg"])
-        st.markdown("<p class='instruction' style='text-align: center;'>Your Account ID should be clearly visible in the image.</p>", unsafe_allow_html=True)
+        st.markdown(
+            "<p class='instruction' style='text-align: center;'>To login, please upload a clear photo of your Account ID for verification.</p>",
+            unsafe_allow_html=True,
+        )
+        uploaded_file = st.file_uploader(
+            "Upload Account ID", type=["jpg", "png", "jpeg"]
+        )
+        st.markdown(
+            "<p class='instruction' style='text-align: center;'>Your Account ID should be clearly visible in the image.</p>",
+            unsafe_allow_html=True,
+        )
 
     if uploaded_file is not None:
         image_bytes = uploaded_file.read()
 
         with st.spinner("Verifying document..."):
+            # Check image quality
             quality_result = check_image_quality(image_bytes)
             if "error" in quality_result or quality_result.get("qualityScore", 0) < 0.4:
-                display_error("Document quality is poor. Please upload a clearer image.")
+                display_error(
+                    "Document quality is poor. Please upload a clearer image."
+                )
                 return
 
+            # Process document
             document_result = process_document(image_bytes, "id")
             if not document_result["success"]:
                 display_error(f"Error: {document_result.get('error')}")
                 return
 
+            # Extract and validate account ID
             account_id = document_result["data"].get("documentNumber", "").strip()
             needs_format_correction = account_id and not account_id.startswith("RF-")
-            
+
             if needs_format_correction:
                 account_id = "RF-" + account_id
-                display_info(f"ID format corrected to: {account_id}", speak=False)  # Don't speak this
+                display_info(f"ID format corrected to: {account_id}", speak=False)
 
             if account_id in fraud_db:
                 display_error("Fraud detected. Please contact support.")
@@ -321,16 +388,13 @@ def render_login_page():
                 # User exists, set session state and navigate
                 st.session_state.verified_user = user_data.copy()
                 st.session_state.verified_user["account_id"] = account_id
-                display_success(f"Welcome, {user_data['name']}!")
                 st.session_state.current_page = "dashboard"
-                st.rerun()
+                display_success(f"Welcome, {user_data['name']}!", speak=True)
+                st.session_state.welcome_message_played = True
+                st.rerun()  # imp to have is permitting user going to dashboard after verification
             else:
                 # User doesn't exist
-                if needs_format_correction:
-                    # If we already displayed a format correction, don't speak the error message
-                    display_error("Invalid Account ID. Please try again.")
-                else:
-                    display_error("Invalid Account ID. Please try again.")
+                display_error("Invalid Account ID. Please try again.")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -342,7 +406,8 @@ def render_login_page():
     st.markdown("2. Ensure there's good lighting when taking the photo")
     st.markdown("3. Call our support line at 1-800-555-0123 for assistance")
     st.markdown("</div>", unsafe_allow_html=True)
-    
+
+
 def render_dashboard():
     if not st.session_state.verified_user:
         display_error("Please log in first.")
@@ -350,24 +415,35 @@ def render_dashboard():
         return
 
     user = st.session_state.verified_user
-    st.markdown(f"<h2 style='text-align: center;'>Welcome, {user['name']}!</h2>", unsafe_allow_html=True)
+
+    # ========== Render ALL UI components first ==========
+    # Welcome header
+    st.markdown(
+        f"<h2 style='text-align: center;'>Welcome, {user['name']}!</h2>",
+        unsafe_allow_html=True,
+    )
 
     # Account Balance Panel
     st.markdown("<div class='panel'>", unsafe_allow_html=True)
     st.subheader("Account Balance")
-    st.markdown(f"<p class='big-font'>${user['balance']}</p>", unsafe_allow_html=True)
-    text_to_speech(f"Your balance is {user['balance']} dollars.")
+    st.markdown(
+        f"<p class='big-font'>{format_balance(user['balance'])}</p>",
+        unsafe_allow_html=True,
+    )
     st.markdown("</div>", unsafe_allow_html=True)
 
     # Forms & Applications Panel
     st.markdown("<div class='panel'>", unsafe_allow_html=True)
     st.subheader("Forms & Applications")
-    st.markdown("<p class='instruction'>Select a form type to get started</p>", unsafe_allow_html=True)
+    st.markdown(
+        "<p class='instruction'>Select a form type to get started</p>",
+        unsafe_allow_html=True,
+    )
 
     form_type = st.selectbox(
         "Select Form Type",
         options=list(form_templates.keys()),
-        format_func=lambda x: form_templates[x]["title"]
+        format_func=lambda x: form_templates[x]["title"],
     )
 
     col1, col2 = st.columns(2)
@@ -378,16 +454,27 @@ def render_dashboard():
 
     with col2:
         if st.button("Upload Existing Form", use_container_width=True):
-            st.session_state.show_upload = True if not st.session_state.get('show_upload', False) else False
+            st.session_state.show_upload = not st.session_state.get(
+                "show_upload", False
+            )
 
-    if st.session_state.get('show_upload', False):
-        st.markdown("<div style='padding: 10px; background-color: #f0f0f0; border-radius: 5px;'>", unsafe_allow_html=True)
-        st.markdown("<p class='instruction'>Upload a completed form for processing</p>", unsafe_allow_html=True)
+    # Upload section - properly nested inside the main panel
+    if st.session_state.get("show_upload", False):
+        st.markdown(
+            "<div style='padding: 10px; background-color: #f0f0f0; border-radius: 5px; margin-top: 15px;'>",
+            unsafe_allow_html=True,
+        )
+
+        st.markdown(
+            "<p class='instruction'>Upload a completed form for processing</p>",
+            unsafe_allow_html=True,
+        )
         uploaded_form = st.file_uploader("Upload Form", type=["jpg", "png", "pdf"])
 
         if uploaded_form:
             form_bytes = uploaded_form.read()
             quality_result = check_image_quality(form_bytes)
+
             if "error" in quality_result or quality_result.get("qualityScore", 0) < 0.6:
                 display_error("Form quality is poor. Please upload a clearer image.")
             else:
@@ -400,18 +487,27 @@ def render_dashboard():
                         save_user_data(user["account_id"], extracted_data)
                         display_success("Form data extracted successfully.")
 
-                        # Display extracted data in a table format
-                        st.markdown("<table style='width:100%; border-collapse: collapse;'>", unsafe_allow_html=True)
+                        # Display extracted data
+                        st.markdown(
+                            "<table style='width:100%; border-collapse: collapse;'>",
+                            unsafe_allow_html=True,
+                        )
                         for key, value in extracted_data.items():
                             field_name = key.replace("_", " ").title()
-                            st.markdown(f"<tr><td style='padding:8px; border:1px solid #ddd; font-weight:bold;'>{field_name}</td><td style='padding:8px; border:1px solid #ddd;'>{value}</td></tr>", unsafe_allow_html=True)
+                            st.markdown(
+                                f"<tr>"
+                                f"<td style='padding:8px; border:1px solid #ddd; font-weight:bold;'>{field_name}</td>"
+                                f"<td style='padding:8px; border:1px solid #ddd;'>{value}</td>"
+                                f"</tr>",
+                                unsafe_allow_html=True,
+                            )
                         st.markdown("</table>", unsafe_allow_html=True)
                     else:
                         display_error("Could not extract form data.")
 
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)  # Close upload section div
 
-    st.markdown("</div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)  # Close main Forms panel
 
     # Profile Information Panel
     st.markdown("<div class='panel'>", unsafe_allow_html=True)
@@ -420,25 +516,63 @@ def render_dashboard():
     col1, col2 = st.columns(2)
     with col1:
         st.markdown("<p class='field-label'>Name:</p>", unsafe_allow_html=True)
-        st.write(user.get('name', 'Not available'))
+        st.write(user.get("name", "Not available"))
 
         st.markdown("<p class='field-label'>Account ID:</p>", unsafe_allow_html=True)
-        st.write(user.get('account_id', 'Not available'))
+        st.write(user.get("account_id", "Not available"))
 
     with col2:
         st.markdown("<p class='field-label'>Last Login:</p>", unsafe_allow_html=True)
-        st.write(user.get('last_login', 'First Login'))
+        st.write(user.get("last_login", "First Login"))
 
         st.markdown("<p class='field-label'>Account Type:</p>", unsafe_allow_html=True)
-        st.write(user.get('account_type', 'Standard'))
+        st.write(user.get("account_type", "Standard"))
 
     if st.button("Sign Out", use_container_width=True):
         st.session_state.verified_user = None
+        st.session_state.dashboard_audio_played = False
         navigate_to("login")
 
-    st.markdown("</div>", unsafe_allow_html=True)
-    
+    st.markdown("</div>", unsafe_allow_html=True)  # Close Profile panel
+
+    # ========== Audio handling AFTER UI renders ==========
+    # Audio handling - Moved INSIDE the function
+    if (
+        not st.session_state.dashboard_audio_played
+        and st.session_state.text_to_speech_enabled
+        and st.session_state.verified_user
+    ):
+        user = st.session_state.verified_user
+        audio_text = f"{user['name']}. Your account balance is {format_balance(user['balance'])}."
+
+        try:
+            audio_html = text_to_speech(audio_text)
+            if audio_html:
+                st.markdown(audio_html, unsafe_allow_html=True)
+                st.session_state.dashboard_audio_played = True  # Set FIRST
+        except Exception as e:
+            st.error(f"Audio error: {e}")
+
+
 def render_form_filling():
+    # In render_form_filling():
+    st.markdown(
+        f"""
+        <div class='step-indicator'>
+        Step 1 of 2: Providing Personal Information
+        </div>
+        <style>
+        .step-indicator {{
+        font-size: {st.session_state.font_size+2}px;
+        color: var(--primary);
+        margin-bottom: 1rem;
+        font-weight: bold;
+    }}
+    </style>
+    """,
+        unsafe_allow_html=True,
+    )
+
     if not st.session_state.verified_user:
         display_error("Please login first.")
         navigate_to("login")
@@ -446,9 +580,14 @@ def render_form_filling():
 
     # If no form is selected yet, show form selection
     if not st.session_state.current_form:
-        st.markdown("<h2 style='text-align: center;'>Select a Form</h2>", unsafe_allow_html=True)
+        st.markdown(
+            "<h2 style='text-align: center;'>Select a Form</h2>", unsafe_allow_html=True
+        )
         st.markdown("<div class='panel'>", unsafe_allow_html=True)
-        st.markdown("<p class='instruction'>Choose the type of form you need to fill out</p>", unsafe_allow_html=True)
+        st.markdown(
+            "<p class='instruction'>Choose the type of form you need to fill out</p>",
+            unsafe_allow_html=True,
+        )
 
         form_options = list(form_templates.keys())
         form_cols = st.columns(len(form_options))
@@ -456,8 +595,13 @@ def render_form_filling():
         for i, form_key in enumerate(form_options):
             with form_cols[i]:
                 form_title = form_templates[form_key]["title"]
-                st.markdown(f"<p style='text-align:center; font-weight:bold;'>{form_title}</p>", unsafe_allow_html=True)
-                if st.button(f"Select", key=f"select_{form_key}", use_container_width=True):
+                st.markdown(
+                    f"<p style='text-align:center; font-weight:bold;'>{form_title}</p>",
+                    unsafe_allow_html=True,
+                )
+                if st.button(
+                    f"Select", key=f"select_{form_key}", use_container_width=True
+                ):
                     st.session_state.current_form = form_key
                     st.rerun()
 
@@ -468,35 +612,59 @@ def render_form_filling():
     form_type = st.session_state.current_form
     form_template = form_templates[form_type]
 
-    st.markdown(f"<h2 style='text-align: center;'>{form_template['title']}</h2>", unsafe_allow_html=True)
+    st.markdown(
+        f"<h2 style='text-align: center;'>{form_template['title']}</h2>",
+        unsafe_allow_html=True,
+    )
 
     # Get autocomplete data
-    autocomplete_data = get_autocomplete_data(user["account_id"], form_template["fields"])
+    autocomplete_data = get_autocomplete_data(
+        user["account_id"], form_template["fields"]
+    )
 
     # Form panel
     st.markdown("<div class='panel'>", unsafe_allow_html=True)
 
     # Form instructions
     if "description" in form_template:
-        st.markdown(f"<p class='instruction'>{form_template['description']}</p>", unsafe_allow_html=True)
+        st.markdown(
+            f"<p class='instruction'>{form_template['description']}</p>",
+            unsafe_allow_html=True,
+        )
 
     # Add progress indicator
-    total_fields = len(form_template["fields"])
     st.progress(0.0)  # Start with empty progress
 
     # Organize form into sections if needed
-    form_data = {}
+    form_data = {
+        field: "" for field in form_template["fields"]
+    }  # Initialize form data with empty strings
 
     # Pre-fill Account ID
     if "account_id" in form_template["fields"]:
         st.markdown("<p class='field-label'>Account ID</p>", unsafe_allow_html=True)
-        st.markdown("<p class='field-help'>Your account identifier</p>", unsafe_allow_html=True)
-        st.text_input("Account ID", value=user["account_id"], disabled=True, key="account_id_field")
+        st.markdown(
+            "<p class='field-help'>Your account identifier</p>", unsafe_allow_html=True
+        )
+        st.text_input(
+            "Account ID",
+            value=user["account_id"],
+            disabled=True,
+            key="account_id_field",
+        )
         form_data["account_id"] = user["account_id"]
 
     # Group fields into logical sections (e.g., personal info, request details)
-    personal_fields = [f for f in form_template["fields"] if f in ["name", "dob", "address", "phone", "email"] and f != "account_id"]
-    request_fields = [f for f in form_template["fields"] if f not in personal_fields and f != "account_id"]
+    personal_fields = [
+        f
+        for f in form_template["fields"]
+        if f in ["name", "dob", "address", "phone", "email"] and f != "account_id"
+    ]
+    request_fields = [
+        f
+        for f in form_template["fields"]
+        if f not in personal_fields and f != "account_id"
+    ]
 
     if personal_fields:
         st.subheader("Personal Information")
@@ -505,22 +673,52 @@ def render_form_filling():
             default_value = autocomplete_data.get(field, "")
             field_label = field.replace("_", " ").title()
 
-            st.markdown(f"<p class='field-label'>{field_label}</p>", unsafe_allow_html=True)
+            st.markdown(
+                f"<p class='field-label'>{field_label}</p>", unsafe_allow_html=True
+            )
 
             if field == "dob":
-                st.markdown("<p class='field-help'>Your date of birth</p>", unsafe_allow_html=True)
-                form_data[field] = st.date_input("Date of Birth", value=None, key=f"field_{field}")
+                st.markdown(
+                    "<p class='field-help'>Your date of birth</p>",
+                    unsafe_allow_html=True,
+                )
+                form_data[field] = st.date_input(
+                    "Date of Birth", value=None, key=f"field_{field}"
+                )
             elif field == "phone":
-                st.markdown("<p class='field-help'>Your contact phone number</p>", unsafe_allow_html=True)
-                form_data[field] = st.text_input("Phone", value=default_value, key=f"field_{field}", placeholder="(123) 456-7890")
+                st.markdown(
+                    "<p class='field-help'>Your contact phone number</p>",
+                    unsafe_allow_html=True,
+                )
+                form_data[field] = st.text_input(
+                    "Phone",
+                    value=default_value,
+                    key=f"field_{field}",
+                    placeholder="(123) 456-7890",
+                )
             elif field == "email":
-                st.markdown("<p class='field-help'>Your email address</p>", unsafe_allow_html=True)
-                form_data[field] = st.text_input("Email", value=default_value, key=f"field_{field}", placeholder="your.email@example.com")
+                st.markdown(
+                    "<p class='field-help'>Your email address</p>",
+                    unsafe_allow_html=True,
+                )
+                form_data[field] = st.text_input(
+                    "Email",
+                    value=default_value,
+                    key=f"field_{field}",
+                    placeholder="your.email@example.com",
+                )
             elif field == "address":
-                st.markdown("<p class='field-help'>Your current mailing address</p>", unsafe_allow_html=True)
-                form_data[field] = st.text_area("Address", value=default_value, key=f"field_{field}", height=100)
+                st.markdown(
+                    "<p class='field-help'>Your current mailing address</p>",
+                    unsafe_allow_html=True,
+                )
+                form_data[field] = st.text_area(
+                    "Address", value=default_value, key=f"field_{field}", height=100
+                )
             else:
-                form_data[field] = st.text_input(field_label, value=default_value, key=f"field_{field}")
+                form_data[field] = st.text_input(
+                    field_label, value=default_value, key=f"field_{field}"
+                )
 
     if request_fields:
         st.subheader("Request Details")
@@ -529,24 +727,53 @@ def render_form_filling():
             default_value = autocomplete_data.get(field, "")
             field_label = field.replace("_", " ").title()
 
-            st.markdown(f"<p class='field-label'>{field_label}</p>", unsafe_allow_html=True)
+            st.markdown(
+                f"<p class='field-label'>{field_label}</p>", unsafe_allow_html=True
+            )
 
             if field == "treatment_date":
-                st.markdown("<p class='field-help'>Date of treatment or service</p>", unsafe_allow_html=True)
-                form_data[field] = st.date_input("Date", value=None, key=f"field_{field}")
+                st.markdown(
+                    "<p class='field-help'>Date of treatment or service</p>",
+                    unsafe_allow_html=True,
+                )
+                form_data[field] = st.date_input(
+                    "Date", value=None, key=f"field_{field}"
+                )
             elif field == "amount":
-                st.markdown("<p class='field-help'>Dollar amount requested</p>", unsafe_allow_html=True)
-                form_data[field] = st.number_input("Amount ($)", value=0.0, step=10.0, key=f"field_{field}")
+                st.markdown(
+                    "<p class='field-help'>Dollar amount requested</p>",
+                    unsafe_allow_html=True,
+                )
+                form_data[field] = st.number_input(
+                    "Amount ($)", value=0.0, step=10.0, key=f"field_{field}"
+                )
             elif field == "reason":
-                st.markdown("<p class='field-help'>Reason for this request</p>", unsafe_allow_html=True)
-                options = ["Medical Expense", "Withdrawal", "Address Change", "Beneficiary Update", "Other"]
-                form_data[field] = st.selectbox("Select Reason", options=options, key=f"field_{field}")
+                st.markdown(
+                    "<p class='field-help'>Reason for this request</p>",
+                    unsafe_allow_html=True,
+                )
+                options = [
+                    "Medical Expense",
+                    "Withdrawal",
+                    "Address Change",
+                    "Beneficiary Update",
+                    "Other",
+                ]
+                form_data[field] = st.selectbox(
+                    "Select Reason", options=options, key=f"field_{field}"
+                )
             elif field == "description":
-                st.markdown("<p class='field-help'>Additional details about your request</p>", unsafe_allow_html=True)
-                form_data[field] = st.text_area("Details", value=default_value, key=f"field_{field}", height=150)
+                st.markdown(
+                    "<p class='field-help'>Additional details about your request</p>",
+                    unsafe_allow_html=True,
+                )
+                form_data[field] = st.text_area(
+                    "Details", value=default_value, key=f"field_{field}", height=150
+                )
             else:
-                form_data[field] = st.text_input(field_label, value=default_value, key=f"field_{field}")
-
+                form_data[field] = st.text_input(
+                    field_label, value=default_value, key=f"field_{field}"
+                )
     # Form submission buttons
     col1, col2 = st.columns(2)
     with col1:
@@ -555,31 +782,59 @@ def render_form_filling():
 
     with col2:
         if st.button("Submit Form", use_container_width=True):
-            # Updated to handle the tuple return value from validate_form_data
-            validation_result, errors = validate_form_data(form_data, form_template["fields"])
-            if validation_result:
-                save_user_data(user["account_id"], form_data)
-                display_success("Form submitted successfully!")
+            if st.session_state.form_submission_in_progress:
+                display_error("Submission already in progress", speak=False)
+        else:
+            st.session_state.form_submission_in_progress = True
+            st.session_state.error_message_shown = False  # Reset error state
 
-                # Show summary of submitted data
-                st.subheader("Submission Summary")
+            try:
+                # First check if we have any data to submit
+                if any(form_data.values()):
+                    # Auto-correct inputs before validation
+                    corrected_data = auto_correct_form_data(form_data)
 
-                # Format the summary in a table
-                st.markdown("<table style='width:100%; border-collapse: collapse;'>", unsafe_allow_html=True)
-                for key, value in form_data.items():
-                    if key != "account_id":  # Skip account ID in summary
-                        field_name = key.replace("_", " ").title()
-                        st.markdown(f"<tr><td style='padding:8px; border:1px solid #ddd; font-weight:bold;'>{field_name}</td><td style='padding:8px; border:1px solid #ddd;'>{value}</td></tr>", unsafe_allow_html=True)
-                st.markdown("</table>", unsafe_allow_html=True)
+                    # Debug log
+                    print(f"Validating form data: {corrected_data}")
 
-                # Add a button to return to dashboard
-                if st.button("Return to Dashboard", use_container_width=True):
-                    navigate_to("dashboard")
-            else:
-                # Display each validation error message
-                for error in errors:
-                    display_error(error)
+                    # Validate corrected data
+                    is_valid, errors = validate_form_data(corrected_data, form_template["fields"])
 
+                    if is_valid:
+                        # Show corrections to user if any
+                        if 'changes' in corrected_data and corrected_data['changes']:
+                            display_info("We made these corrections: " + str(corrected_data.get('changes', {})))
+
+                        # Save the corrected data
+                        save_user_data(user["account_id"], corrected_data)
+                        display_success("Form submitted successfully!")
+
+                        # Submission summary
+                        st.subheader("Submission Summary")
+                        st.markdown("<table style='width:100%; border-collapse: collapse;'>", unsafe_allow_html=True)
+                        for key, value in corrected_data.items():
+                            if key != "account_id" and key != "changes":
+                                field_name = key.replace("_", " ").title()
+                                st.markdown(
+                                    f"<tr><td style='padding:8px; border:1px solid #ddd; font-weight:bold;'>{field_name}</td>"
+                                    f"<td style='padding:8px; border:1px solid #ddd;'>{value}</td></tr>",
+                                    unsafe_allow_html=True,
+                                )
+                        st.markdown("</table>", unsafe_allow_html=True)
+
+                        if st.button("Return to Dashboard", use_container_width=True):
+                            navigate_to("dashboard")
+                    else:
+                        # Display each validation error
+                        for error in errors:
+                            display_error(error)
+                else:
+                    display_error("Please fill out the form before submitting.")
+            finally:
+                # Ensure flag is reset whether success/failure
+                st.session_state.form_submission_in_progress = False
+                st.rerun()  # To update UI
+    
     st.markdown("</div>", unsafe_allow_html=True)
 
     # Help panel
@@ -591,56 +846,40 @@ def render_form_filling():
     st.markdown("3. Email us at support@airetire.com")
     st.markdown("</div>", unsafe_allow_html=True)
 
-# Validate form data
-def validate_form_data(form_data, form_fields):
-    """
-    Validates user inputs against form requirements with Azure-enhanced checks.
-    Returns: (is_valid, error_messages)
-    """
-    errors = []
-    
-    # 1. Check required fields
-    for field in form_fields:
-        if not form_data.get(field):
-            errors.append(f"Missing required field: {field.replace('_', ' ').title()}")
-    
-    # 2. Add Azure Content Safety check for sensitive data
-    sensitive_fields = ["ssn", "account_number", "dob"]
-    for field in sensitive_fields:
-        if field in form_data:
-            # Use Azure Content Safety API
-            is_flagged = detect_sensitive_data(form_data[field])
-            if is_flagged:
-                errors.append(f"⚠️ Do NOT share sensitive data in {field.replace('_', ' ').title()} field")
 
-    return (len(errors) == 0, errors)
+# Add to AIretire.py
+def render_ai_assistant():
+    st.markdown(
+        "<h2 style='text-align: center;'>AI Retirement Assistant</h2>",
+        unsafe_allow_html=True,
+    )
 
-# This function needs to be implemented to use Azure Content Safety
-def detect_sensitive_data(value):
-    """
-    Checks if a value contains sensitive data using Azure Content Safety API.
-    Returns: True if sensitive data detected, False otherwise
-    
-    TODO: Implement this function with Azure Content Safety API
-    """
-    # Placeholder for Azure Content Safety API implementation
-    # Example implementation (replace with actual API call):
-    # from azure.ai.contentsafety import ContentSafetyClient
-    # from azure.core.credentials import AzureKeyCredential
-    # client = ContentSafetyClient(endpoint="your_endpoint", credential=AzureKeyCredential("your_key"))
-    # result = client.analyze_text(text=str(value))
-    # return result.harmful_content_detected
-    
-    # For now, return False (no sensitive data detected)
-    # but you will replace this with actual implementation
-    return False
+    # Initialize chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
+    # Display chat messages
+    for msg in st.session_state.messages:
+        st.chat_message(msg["role"]).write(msg["content"])
 
-#def validate_form_data(form_data, required_fields):
-    for field in required_fields:
-        if field not in form_data or not form_data[field]:
-            return False
-    #return True""" # THIS WAS WORKING BEFORE BUT ADDED EXTRA CODE FOR MORE FUNCTIONALITY, DELETE IF NOT IN USE
+    # Process input
+    if prompt := st.chat_input("Ask me about retirement planning..."):
+        try:
+            processed_prompt = process_prompt(prompt)
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            st.chat_message("user").write(prompt)
+
+            with st.spinner("Analyzing..."):
+                response = get_ai_response(processed_prompt)
+
+            st.session_state.messages.append({"role": "assistant", "content": response})
+            st.chat_message("assistant").write(response)
+
+        except ValueError as e:
+            st.error(f"Safety check failed: {str(e)}")
+            suggestion = suggest_alternative(prompt)
+            st.info(f"Try asking instead: '{suggestion}'")
+
 
 # Main Application Flow
 def main():
@@ -648,7 +887,10 @@ def main():
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.image("assets/AIretire_Logo.png", width=200)  # Replace with actual logo path
-        st.markdown("<h1 style='text-align: center;'>AIretire: <br> Your all-in-one service </br> </h1>", unsafe_allow_html=True)
+        st.markdown(
+            "<h1 style='text-align: center;'>AIretire: <br> Your all-in-one service </br> </h1>",
+            unsafe_allow_html=True,
+        )
 
     # Display accessibility sidebar
     display_accessibility_controls()
@@ -663,9 +905,15 @@ def main():
         render_dashboard()
     elif st.session_state.current_page == "form_filling":
         render_form_filling()
+    elif st.session_state.current_page == "ai_assistant":  # NEW LINE
+        render_ai_assistant()
 
     # Footer
-    st.markdown("<footer>© 2025 AIretire. All rights reserved.</footer>", unsafe_allow_html=True)
+    st.markdown(
+        "<footer>© 2025 AIretire. All rights reserved.</footer>", unsafe_allow_html=True
+    )
+
 
 if __name__ == "__main__":
+
     main()

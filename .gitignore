@@ -1,3 +1,5 @@
 .qodo
 *.env
 /venv/
+temp_azure_audio.wav
+.language_tool_cache/
