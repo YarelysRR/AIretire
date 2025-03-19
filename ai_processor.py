@@ -105,15 +105,35 @@ def get_relevant_trusted_domains(text):
     
     return relevant_domains
 
+def redact_sensitive_info(text):
+    """Redact any sensitive information from text"""
+    # Common patterns for sensitive data
+    patterns = {
+        r'\b\d{3}[-.]?\d{2}[-.]?\d{4}\b': '[REDACTED SSN]',  # SSN
+        r'\b\d{4}[-.]?\d{4}[-.]?\d{4}[-.]?\d{4}\b': '[REDACTED Card Number]',  # Credit card
+        r'\b[A-Z]\d{2}[-.]?\d{2}[-.]?\d{4}\b': '[REDACTED Medicare Number]',  # Medicare number
+        r'\b\d{3}[-.]?\d{3}[-.]?\d{4}\b': '[REDACTED Phone Number]',  # Phone number
+    }
+    
+    result = text
+    for pattern, replacement in patterns.items():
+        result = re.sub(pattern, replacement, result)
+    return result
+
 def get_ai_response(prompt):
     """Process user input through safety pipeline and get AI response"""
     try:
         # First process through safety pipeline
         safe_prompt = process_prompt(prompt)
         
+        # Redact any sensitive information from the prompt before sending to AI
+        safe_prompt = redact_sensitive_info(safe_prompt)
+        
         # Auto-detect potential phishing patterns
         if contains_suspicious_content(safe_prompt):
-            system_msg = """You're a Senior Support Assistant specializing in retirement, health, and digital security. You are a friendly, patient, and trustworthy AI assistant designed to support seniors. Always prioritize clear, simple, and empathetic communication
+            system_msg = """You're a Senior Support Assistant specializing in retirement, health, and digital security. You are a friendly, patient, and trustworthy AI assistant designed to support seniors. Always prioritize clear, simple, and empathetic communication.
+            
+            IMPORTANT: NEVER repeat any sensitive information like SSN, Medicare numbers, or account numbers in your responses, even if the user shared them.
             
             Always:
             1. Use simple, empathetic language (reading level: 6th grade)
@@ -136,7 +156,9 @@ def get_ai_response(prompt):
             
             [ALERT: Potential phishing detected in query!]"""
         else:
-            system_msg = """You're a Senior Support Assistant specializing in retirement, health, and digital security. You are a friendly, patient, and trustworthy AI assistant designed to support seniors. Always prioritize clear, simple, and empathetic communication
+            system_msg = """You're a Senior Support Assistant specializing in retirement, health, and digital security. You are a friendly, patient, and trustworthy AI assistant designed to support seniors. Always prioritize clear, simple, and empathetic communication.
+            
+            IMPORTANT: NEVER repeat any sensitive information like SSN, Medicare numbers, or account numbers in your responses, even if the user shared them.
             
             Always:
             1. Use simple, empathetic language (reading level: 6th grade)
@@ -159,8 +181,7 @@ def get_ai_response(prompt):
         
         try:
             # Step 1: Get AI response using Gemini
-            #USE #gemini-2.0 Flash IF exceeding limit, RPD,RPM or TPM quota
-            model = genai.GenerativeModel('gemini-1.5-pro') #gemini-2.0 Flash 
+            model = genai.GenerativeModel('gemini-1.5-pro')
             chat = model.start_chat(history=[])
             
             # With Gemini, we combine system and user messages
@@ -170,8 +191,11 @@ def get_ai_response(prompt):
             # Extract raw response text
             raw_response = response.text
             
+            # Step 2: Redact any sensitive information from the response
+            safe_response = redact_sensitive_info(raw_response)
+            
             # Step 3: Apply empathy enhancements
-            empathetic_response = add_empathy_enhancements(raw_response)
+            empathetic_response = add_empathy_enhancements(safe_response)
             
             # Step 4: Apply link safety checks
             safe_response = process_links(empathetic_response)
