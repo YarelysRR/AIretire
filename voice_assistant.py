@@ -44,30 +44,74 @@ def text_to_speech(text):
 
 # ADDED NEW
 def speech_to_text():
+    """
+    Convert speech to text using Azure Speech Services.
+    Returns the transcribed text or None if there's an error.
+    """
     try:
         speech_config = speechsdk.SpeechConfig(
             subscription=SPEECH_KEY, region=SPEECH_REGION
         )
-        audio_config = speechsdk.audio.AudioConfig(use_default_microphone=True)
-        recognizer = speechsdk.SpeechRecognizer(
-            speech_config=speech_config, audio_config=audio_config
+        speech_config.speech_recognition_language = "en-US"
+        
+        # Configure recognition settings for better silence detection
+        speech_config.set_property(
+            speechsdk.PropertyId.Speech_SegmentationSilenceTimeoutMs, "3000"  # 3 seconds silence
+        )
+        speech_config.set_property(
+            speechsdk.PropertyId.SpeechServiceConnection_InitialSilenceTimeoutMs, "5000"  # 5 seconds to start
+        )
+        speech_config.set_property(
+            speechsdk.PropertyId.SpeechServiceConnection_EndSilenceTimeoutMs, "3000"  # Stop after 3s silence
         )
         
-        # Use recognize_once instead of recognize_once_async for better control
+        audio_config = speechsdk.audio.AudioConfig(use_default_microphone=True)
+        
+        # Create recognizer with the given settings
+        recognizer = speechsdk.SpeechRecognizer(
+            speech_config=speech_config, 
+            audio_config=audio_config
+        )
+
+        # Set up result handling
+        done = False
+        recognized_text = None
+
+        def handle_result(evt):
+            nonlocal recognized_text
+            if evt.result.text:
+                recognized_text = evt.result.text
+
+        def stop_cb(evt):
+            nonlocal done
+            done = True
+        
+        # Connect callbacks to the events
+        recognizer.recognized.connect(handle_result)
+        recognizer.session_stopped.connect(stop_cb)
+        recognizer.canceled.connect(stop_cb)
+        
+        # Start recognition
         result = recognizer.recognize_once()
         
-        if result.text:
-            # Process the recognized text through safety pipeline
-            try:
-                safe_text = process_prompt(result.text)
-                return safe_text
-            except ValueError as e:
-                # Convert safety warning to speech
-                warning = f"Safety Alert: {str(e)}"
-                text_to_speech(warning)
-                return warning
-        return ""
-            
+        # Process the result
+        if result.reason == speechsdk.ResultReason.RecognizedSpeech:
+            if result.text:
+                try:
+                    # Process through safety pipeline
+                    safe_text = process_prompt(result.text)
+                    return safe_text
+                except ValueError as e:
+                    print(f"Safety check failed: {e}")
+                    return None
+            return None
+        elif result.reason == speechsdk.ResultReason.NoMatch:
+            if result.no_match_details.reason == speechsdk.NoMatchReason.InitialSilenceTimeout:
+                print("No speech detected within timeout period")
+            return None
+        elif result.reason == speechsdk.ResultReason.Canceled:
+            return None
+        
     except Exception as e:
         print(f"Speech Recognition Error: {e}")
-        return ""
+        return None

@@ -2,6 +2,7 @@
 import os
 import base64
 import streamlit as st
+import time
 
 from dotenv import load_dotenv
 from datetime import datetime
@@ -862,7 +863,8 @@ def render_ai_assistant():
         "is_speaking": False,
         "stop_speech_requested": False,
         "processing_input": False,
-        "current_transcription": None
+        "current_transcription": None,
+        "transcription_complete": False
     }.items():
         if key not in st.session_state:
             st.session_state[key] = default_value
@@ -900,65 +902,101 @@ def render_ai_assistant():
         with col2:
             if not st.session_state.is_recording:
                 if st.button("🎤", help="Click to start speaking", key="start_mic"):
+                    # Clear any previous states first
+                    st.session_state.voice_input = None
+                    st.session_state.current_transcription = None
+                    st.session_state.is_speaking = False
+                    st.session_state.transcription_complete = False
+                    # Then start recording
                     st.session_state.is_recording = True
                     st.session_state.recording_start_time = datetime.now()
-                    st.session_state.voice_input = None
                     st.rerun()
             else:
                 if st.button("🔴", help="Click to stop recording", key="stop_mic"):
+                    # Only attempt final transcription if we don't have one yet
+                    if not st.session_state.transcription_complete:
+                        final_input = speech_to_text()
+                        if final_input:
+                            st.session_state.current_transcription = final_input
+                            st.session_state.transcription_complete = True
+                    
+                    # Reset recording states
                     st.session_state.is_recording = False
+                    st.session_state.recording_start_time = None
+                    
+                    # Force immediate rerun to update UI
                     st.rerun()
 
-    # Recording handler with precise timing
+    # Recording handler with precise timing and feedback
     if st.session_state.is_recording and st.session_state.recording_start_time:
-        elapsed_time = (datetime.now() - st.session_state.recording_start_time).total_seconds()
-        remaining_time = max(0, int(20 - elapsed_time))
-
-        if remaining_time > 0:
-            st.markdown(f"""
-                <div style='padding: 1rem; border-radius: 0.5rem; background-color: #d32f2f; margin: 1rem 0;'>
-                    <p style='color: white; margin: 0; font-size: 1.2rem; font-weight: bold;'>
-                        🎙️ Recording... {remaining_time} seconds remaining
-                    </p>
-                </div>
-            """, unsafe_allow_html=True)
-            
+        # Show recording status
+        st.markdown(f"""
+            <div style='padding: 1rem; border-radius: 0.5rem; background-color: #d32f2f; margin: 1rem 0;'>
+                <p style='color: white; margin: 0; font-size: 1.2rem; font-weight: bold;'>
+                    🎙️ Recording... (will stop automatically after 3s of silence)
+                </p>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Only attempt speech recognition if we don't have a transcription yet
+        if not st.session_state.transcription_complete:
             voice_input = speech_to_text()
             if voice_input:
-                st.session_state.voice_input = voice_input
+                st.session_state.current_transcription = voice_input
+                st.session_state.transcription_complete = True
+                # Stop recording when we get a transcription
                 st.session_state.is_recording = False
+                st.session_state.recording_start_time = None
                 st.rerun()
-        else:
-            st.session_state.is_recording = False
-            st.session_state.recording_start_time = None
-            st.rerun()
+        
+        # Force rerun to keep UI responsive
+        time.sleep(0.1)
+        st.rerun()
 
-    # Voice input review and submission
-    if st.session_state.voice_input and not st.session_state.is_recording:
+    # Transcription review and submission
+    if st.session_state.current_transcription and not st.session_state.is_recording:
         st.markdown(f"""
             <div style='padding: 1rem; border-radius: 0.5rem; background-color: #1976d2; margin: 1rem 0;'>
-                <p style='color: white; margin: 0; font-size: 1.1rem;'>Transcribed Text:</p>
+                <p style='color: white; margin: 0; font-size: 1.1rem;'>Review your message:</p>
                 <p style='color: white; margin: 0.5rem 0 0 0; font-size: 1.2rem; font-weight: bold;'>
-                    "{st.session_state.voice_input}"
+                    "{st.session_state.current_transcription}"
                 </p>
             </div>
         """, unsafe_allow_html=True)
 
         submit_col, cancel_col = st.columns(2)
         with submit_col:
-            if st.button("✅ Submit", use_container_width=True):
-                process_voice_input(st.session_state.voice_input)
+            if st.button("✅ Submit", use_container_width=True, key="submit_voice"):
+                # First clear transcription states
+                transcription = st.session_state.current_transcription
+                st.session_state.current_transcription = None
                 st.session_state.voice_input = None
+                st.session_state.transcription_complete = False
+                
+                # Then process the input and get response
+                response, audio_html = process_voice_input(transcription)
+                
+                # Set speaking state and rerun to update UI
+                if audio_html:
+                    st.session_state.is_speaking = True
+                    st.markdown(audio_html, unsafe_allow_html=True)
+                
                 st.rerun()
 
         with cancel_col:
-            if st.button("❌ Cancel", use_container_width=True):
+            if st.button("❌ Cancel", use_container_width=True, key="cancel_voice"):
+                # Clear states without processing
+                st.session_state.current_transcription = None
                 st.session_state.voice_input = None
+                st.session_state.transcription_complete = False
                 st.rerun()
 
     # Text input handler
     if text_input:
-        process_voice_input(text_input)
+        response, audio_html = process_voice_input(text_input)
+        if audio_html:
+            st.session_state.is_speaking = True
+            st.markdown(audio_html, unsafe_allow_html=True)
         st.rerun()
 
 def process_voice_input(input_text):
@@ -968,16 +1006,16 @@ def process_voice_input(input_text):
         with st.spinner("Processing..."):
             response = get_ai_response(processed_prompt)
             
-        # Update chat history
+        # First update chat history
         st.session_state.messages.append({"role": "user", "content": input_text})
         st.session_state.messages.append({"role": "assistant", "content": response})
         
-        # Handle text-to-speech
+        # Return the response and audio_html separately
+        audio_html = None
         if st.session_state.text_to_speech_enabled:
-            st.session_state.is_speaking = True
             audio_html = text_to_speech(response)
-            if audio_html:
-                st.markdown(audio_html, unsafe_allow_html=True)
+        
+        return response, audio_html
     
     except ValueError as e:
         st.error(f"Safety check failed: {str(e)}")
@@ -985,8 +1023,8 @@ def process_voice_input(input_text):
         st.info(f"Try asking instead: '{suggestion}'")
         if st.session_state.text_to_speech_enabled:
             audio_html = text_to_speech(f"Safety check failed. Try asking instead: {suggestion}")
-            if audio_html:
-                st.markdown(audio_html, unsafe_allow_html=True)
+            return None, audio_html
+        return None, None
 
 
 # Main Application Flow
