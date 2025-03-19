@@ -3,7 +3,7 @@ import re
 from azure.ai.contentsafety import ContentSafetyClient
 from azure.core.credentials import AzureKeyCredential
 from azure.core.exceptions import HttpResponseError
-from azure.ai.contentsafety.models import AnalyzeTextOptions, TextCategory
+from azure.ai.contentsafety.models import AnalyzeTextOptions,TextCategory
 from language_tool_python import LanguageTool
 from safety_utils import detect_sensitive_data
 
@@ -24,7 +24,6 @@ def process_prompt(raw_input):
 
     # Step 4: Prompt Optimization
     return optimize_prompt(corrected)
-
 
 def detect_harmful_content(text):
     """Expanded safety check using Azure Content Safety"""

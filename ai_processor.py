@@ -4,6 +4,9 @@ from dotenv import load_dotenv
 import re
 import tldextract
 from prompt_safety import process_prompt
+from language_analysis import enhance_text_with_links
+
+
 
 load_dotenv()
 
@@ -80,6 +83,28 @@ def process_links(text):
 
     return text
 
+def get_relevant_trusted_domains(text):
+    """Get relevant trusted domains based on keywords in text"""
+    domain_keywords = {
+        "ssa.gov": ["social security", "ssn", "retirement benefits"],
+        "medicare.gov": ["medicare", "health insurance", "medical"],
+        "ftc.gov": ["scam", "fraud", "identity theft", "cybersecurity", "consumer protection"],
+        "irs.gov": ["tax", "taxes", "refund"],
+        "cdc.gov": ["health", "disease", "medical condition"],
+        "who.int": ["health", "disease", "pandemic"],
+        "aarp.org": ["retirement", "senior", "aging"],
+        "usa.gov": ["government", "federal"]
+    }
+    
+    relevant_domains = []
+    text_lower = text.lower()
+    
+    for domain, keywords in domain_keywords.items():
+        if any(keyword in text_lower for keyword in keywords):
+            relevant_domains.append(domain)
+    
+    return relevant_domains
+
 def get_ai_response(prompt):
     """Process user input through safety pipeline and get AI response"""
     try:
@@ -132,27 +157,61 @@ def get_ai_response(prompt):
                 - Grammar/spelling errors
                 - Unusual payment requests"""
         
-        # Step 1: Get AI response using Gemini
-        model = genai.GenerativeModel('gemini-1.5-pro')
-        chat = model.start_chat(history=[])
-        
-        # With Gemini, we combine system and user messages
-        combined_prompt = f"{system_msg}\n\nUser query: {safe_prompt}"
-        response = chat.send_message(combined_prompt)
-        
-        # Extract raw response text
-        raw_response = response.text
-        
-        # Step 3: Apply empathy enhancements
-        empathetic_response = add_empathy_enhancements(raw_response)
-        
-        # Step 4: Apply link safety checks
-        safe_response = process_links(empathetic_response)
-        
-        return safe_response
+        try:
+            # Step 1: Get AI response using Gemini
+            #USE #gemini-2.0 Flash IF exceeding limit, RPD,RPM or TPM quota
+            model = genai.GenerativeModel('gemini-1.5-pro') #gemini-2.0 Flash 
+            chat = model.start_chat(history=[])
+            
+            # With Gemini, we combine system and user messages
+            combined_prompt = f"{system_msg}\n\nUser query: {safe_prompt}"
+            response = chat.send_message(combined_prompt)
+            
+            # Extract raw response text
+            raw_response = response.text
+            
+            # Step 3: Apply empathy enhancements
+            empathetic_response = add_empathy_enhancements(raw_response)
+            
+            # Step 4: Apply link safety checks
+            safe_response = process_links(empathetic_response)
+            
+            # Step 5: Add relevant official resources based on content
+            relevant_domains = get_relevant_trusted_domains(safe_response)
+            if relevant_domains:
+                safe_response += "\n\nOfficial Resources:\n"
+                for domain in relevant_domains:
+                    if domain == "ftc.gov":
+                        safe_response += f"🔗 Official FTC Cybersecurity Guide: https://consumer.ftc.gov/identity-theft-and-online-security\n"
+                    elif domain == "ssa.gov":
+                        safe_response += f"🔗 Official Social Security Website: https://www.ssa.gov\n"
+                    elif domain == "medicare.gov":
+                        safe_response += f"🔗 Official Medicare Website: https://www.medicare.gov\n"
+                    else:
+                        safe_response += f"🔗 Official Website: https://www.{domain}\n"
+            
+            return safe_response
+            
+        except Exception as e:
+            if "429" in str(e):
+                return ("I apologize, but I've reached my temporary usage limit. "
+                       "Please try again in a few moments. "
+                       "If you need immediate assistance, you can:\n"
+                       "1. Call our support line: 1-800-555-0123\n"
+                       "2. Visit the relevant official website directly:\n"
+                       "   - For cybersecurity: https://consumer.ftc.gov/identity-theft-and-online-security\n"
+                       "   - For Social Security: https://www.ssa.gov\n"
+                       "   - For Medicare: https://www.medicare.gov")
+            else:
+                raise e
     
     except ValueError as e:
         # Return safety warning to user
         return str(e)
     except Exception as e:
-        return f"An error occurred: {str(e)}"
+        error_msg = str(e)
+        if "429" in error_msg:
+            return ("I apologize, but I've reached my temporary usage limit. "
+                   "Please try again in a few moments. "
+                   "If you need immediate assistance, please call our support line: 1-800-555-0123")
+        return f"An error occurred: {error_msg}"
