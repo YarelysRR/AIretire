@@ -26,6 +26,7 @@ def detect_pii(text):
     """
     Detect PII (Personal Identifiable Information) in text.
     Returns a dictionary with detected PII entities and redacted text.
+    Distinguishes between PII discussion and actual PII data.
     """
     try:
         client = initialize_text_analytics_client()
@@ -35,18 +36,44 @@ def detect_pii(text):
         response = client.recognize_pii_entities([text])[0]
         
         if not response.is_error:
-            pii_results = {
-                "detected_entities": [
-                    {
+            # Define discussion keywords that indicate topic rather than actual PII
+            discussion_keywords = {
+                "social security": ["about", "learn", "information", "benefits", "retirement"],
+                "medicare": ["about", "learn", "information", "benefits", "coverage"],
+                "bank": ["about", "learn", "information", "services"],
+                "credit card": ["about", "learn", "information", "services"]
+            }
+            
+            filtered_entities = []
+            for entity in response.entities:
+                # Skip if confidence score is too low
+                if entity.confidence_score < 0.7:
+                    continue
+                    
+                # Check if this is discussion about PII rather than actual PII
+                is_discussion = False
+                entity_text_lower = entity.text.lower()
+                
+                for topic, keywords in discussion_keywords.items():
+                    if topic in entity_text_lower:
+                        # Check if any discussion keywords are present in the context
+                        text_lower = text.lower()
+                        if any(keyword in text_lower for keyword in keywords):
+                            is_discussion = True
+                            break
+                
+                # Only include if it's actual PII (not discussion)
+                if not is_discussion:
+                    filtered_entities.append({
                         "text": entity.text,
                         "category": entity.category,
                         "confidence_score": entity.confidence_score
-                    }
-                    for entity in response.entities
-                ],
-                "redacted_text": response.redacted_text
+                    })
+            
+            return {
+                "detected_entities": filtered_entities,
+                "redacted_text": response.redacted_text if filtered_entities else text
             }
-            return pii_results
             
         return None
         
