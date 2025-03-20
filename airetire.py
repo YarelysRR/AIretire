@@ -517,7 +517,7 @@ def render_dashboard():
                 margin-bottom: 10px;
                 color: #000000;
                 font-weight: 600;
-            '>Upload Existing Form</div>
+            '>Upload Non-Digital Form</div>
             <div style='
                 font-size: 1.1em;
                 color: #000000;
@@ -633,23 +633,23 @@ def render_dashboard():
             st.error(f"Audio error: {e}")
 
 
-
 def render_form_filling():
-    # In render_form_filling():
+    # Check if user is verified
+    if "verified_user" not in st.session_state or st.session_state.verified_user is None:
+        st.error("Please log in first.")
+        st.stop()  # Stops further execution, same as return but clearer for Streamlit apps
 
-    if not st.session_state.verified_user:
-        display_error("Please login first.")
-        navigate_to("login")
-        return
+    # Main user variable assignment
+    user = st.session_state.verified_user
 
-    # If no form is selected yet, show form selection
+    # If no form selected, show options
     if not st.session_state.current_form:
         st.markdown(
-            "<h2 style='text-align: center;'>Forms & Applications</h2>", 
+            "<h2 style='text-align: center;'>Forms & Applications</h2>",
             unsafe_allow_html=True
         )
         st.markdown("<div class='panel'>", unsafe_allow_html=True)
-        
+
         # Categorize forms
         form_categories = {
             "Health & Medical": ["medical_claim", "medication_tracker", "appointment_scheduler"],
@@ -657,26 +657,21 @@ def render_form_filling():
             "Documents & Benefits": ["benefit_application", "document_storage"]
         }
 
-        # Add tabs for categories
+        # Tabs for categories
         tabs = st.tabs(list(form_categories.keys()))
-        
-        # Display forms in each category
+
+        # Display forms in each tab
         for tab, (category, form_types) in zip(tabs, form_categories.items()):
             with tab:
                 st.markdown(
                     f"<p class='instruction'>Select a {category.lower()} form to get started</p>",
                     unsafe_allow_html=True
                 )
-                
-                # Calculate number of columns (2 for smaller screens, 3 for larger)
                 cols_per_row = 2
-                
-                # Create rows of forms
                 for i in range(0, len(form_types), cols_per_row):
                     cols = st.columns(cols_per_row)
                     for j, form_type in enumerate(form_types[i:i + cols_per_row]):
                         with cols[j]:
-                            # Create a card-like container for each form
                             st.markdown(f"""
                                 <div style='
                                     border: 1px solid #cccccc;
@@ -711,16 +706,85 @@ def render_form_filling():
                                     </div>
                                 </div>
                             """, unsafe_allow_html=True)
-                            
-                            # Add a button that covers the entire card
+
+                            # Button to select form
                             if st.button("Select", key=f"form_{form_type}", use_container_width=True):
                                 st.session_state.current_form = form_type
                                 st.rerun()
 
         st.markdown("</div>", unsafe_allow_html=True)
-        return
 
-    user = st.session_state.verified_user
+        # Upload Existing Form Section
+        st.markdown(f"""
+            <div style='
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f8f8;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            '>
+            <div style='
+                font-size: 1.4em;
+                margin-bottom: 10px;
+                color: #000000;
+                font-weight: 600;
+            '>Upload Existing Form</div>
+            <div style='
+                font-size: 1.1em;
+                color: #000000;
+                margin-bottom: 12px;
+                line-height: 1.5;
+            '>Submit a completed form for immediate processing</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Upload button
+        if st.button("Upload Form", key="upload_form_btn", use_container_width=False, type="primary"):
+            st.session_state.show_upload = not st.session_state.get("show_upload", False)
+
+        # Show upload area if toggled
+        if st.session_state.get("show_upload", False):
+            st.markdown(
+                "<div style='padding: 10px; background-color: #f0f0f0; border-radius: 5px; margin-top: 15px;'>",
+                unsafe_allow_html=True,
+            )
+            st.markdown(
+                "<p class='instruction'>Upload a completed form for processing</p>",
+                unsafe_allow_html=True,
+            )
+            uploaded_form = st.file_uploader("Upload Form", type=["jpg", "png", "pdf"])
+            if uploaded_form:
+                form_bytes = uploaded_form.read()
+                quality_result = check_image_quality(form_bytes)
+                if "error" in quality_result or quality_result.get("qualityScore", 0) < 0.6:
+                    display_error("Form quality is poor. Please upload a clearer image.")
+                else:
+                    form_result = process_document(form_bytes, "form")
+                    if not form_result["success"]:
+                        display_error(f"Error: {form_result.get('error')}")
+                    else:
+                        extracted_data = extract_form_data(form_result)
+                        if extracted_data:
+                            save_user_data(user["account_id"], extracted_data)
+                            display_success("Form data extracted successfully.")
+                            st.markdown("<table style='width:100%; border-collapse: collapse;'>", unsafe_allow_html=True)
+                            for key, value in extracted_data.items():
+                                field_name = key.replace("_", " ").title()
+                                st.markdown(
+                                    f"<tr>"
+                                    f"<td style='padding:8px; border:1px solid #ddd; font-weight:bold;'>{field_name}</td>"
+                                    f"<td style='padding:8px; border:1px solid #ddd;'>{value}</td>"
+                                    f"</tr>",
+                                    unsafe_allow_html=True,
+                                )
+                            st.markdown("</table>", unsafe_allow_html=True)
+                        else:
+                            display_error("Could not extract form data.")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        st.stop()  # Stop further processing since no form selected yet (avoids unnecessary rendering)
+
+    # If a form is selected, show form content
     form_type = st.session_state.current_form
     form_template = form_templates[form_type]
 
@@ -728,6 +792,10 @@ def render_form_filling():
         f"<h2 style='text-align: center;'>{form_template['title']}</h2>",
         unsafe_allow_html=True,
     )
+
+    
+    
+    
 
     # Get autocomplete data
     autocomplete_data = get_autocomplete_data(
@@ -1185,7 +1253,7 @@ def main():
 
     # Footer
     st.markdown(
-        "<footer>© 2025 AIretire. All rights reserved.</footer>", unsafe_allow_html=True
+        "<footer style='text-align: center; margin-top: 20px; font-size: 20px;'>© 2025 AIretire. All rights reserved.</footer>", unsafe_allow_html=True
     )
 
 
