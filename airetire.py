@@ -286,7 +286,9 @@ def display_info(message, speak=True):
         {message}
         </div>
         """,
+        unsafe_allow_html=True
     )
+    # Handle text-to-speech if enabled
     if speak and st.session_state.text_to_speech_enabled:
         try:
             audio_html = text_to_speech(f"Info: {message}")
@@ -294,7 +296,6 @@ def display_info(message, speak=True):
                 st.markdown(audio_html, unsafe_allow_html=True)
         except Exception as e:
             st.error(f"Error in text-to-speech: {e}")
-        unsafe_allow_html = (True,)
 
 
 # Accessibility Controls in Sidebar
@@ -395,7 +396,7 @@ def render_login_page():
                 display_info(f"ID format corrected to: {account_id}", speak=False)
 
             if account_id in fraud_db:
-                display_error("Fraud detected. Please contact support.")
+                display_error("You have been flagged as a fraudlent user. Please contact support.")
                 return
 
             # Check if this is a valid user account
@@ -594,7 +595,14 @@ def render_dashboard():
 
     with col2:
         st.markdown("<p class='field-label'>Last Login:</p>", unsafe_allow_html=True)
-        st.write(user.get("last_login", "First Login"))
+        
+        last_login = user.get("last_login", "First Login")
+        if isinstance(last_login, str):
+            st.write(last_login)  # If it's already a string, display it
+        else:
+            # If it's a datetime object, format it before displaying
+            st.write(last_login.strftime("%Y-%m-%d") if isinstance(last_login, datetime) else "Invalid date")
+        
 
         st.markdown("<p class='field-label'>Account Type:</p>", unsafe_allow_html=True)
         st.write(user.get("account_type", "Standard"))
@@ -901,6 +909,8 @@ def render_form_filling():
 
                         # Debug log
                         print(f"Validating form data: {corrected_data}")
+                        print("[DEBUG] Original Phone:", form_data.get("phone"))  
+                        print("[DEBUG] Corrected Phone:", corrected_data.get("phone"))  
 
                         # Validate corrected data
                         is_valid, errors = validate_form_data(
@@ -910,10 +920,11 @@ def render_form_filling():
                         if is_valid:
                             # Show corrections to user if any
                             if "changes" in corrected_data and corrected_data["changes"]:
-                                display_info(
-                                    "We made these corrections: "
-                                    + str(corrected_data.get("changes", {}))
-                                )
+                                corrections = corrected_data["changes"]
+                                notify_user = "We updated the following fields: " + ", ".join(
+                                f"{field}" for field in corrections.keys()
+                            )
+                            display_info(notify_user)
 
                             # Save the corrected data
                             save_user_data(user["account_id"], corrected_data)
@@ -935,8 +946,12 @@ def render_form_filling():
                                     )
                             st.markdown("</table>", unsafe_allow_html=True)
 
-                            if st.button("Return to Dashboard", use_container_width=True):
-                                navigate_to("dashboard")
+                            # Automatically close form after 3 seconds
+                            time.sleep(3)  # Let user see success message
+                            st.session_state.current_form = None  # Reset form
+                            st.session_state.extracted_form_data = {}  # Clear data
+                            st.rerun()  # Refresh UI to return to dashboard
+                            
                         else:
                             # Display each validation error
                             for error in errors:
@@ -948,7 +963,6 @@ def render_form_filling():
                     st.session_state.form_submission_in_progress = False
                     st.rerun()  # To update UI
 
-    st.markdown("</div>", unsafe_allow_html=True)
 
     # Help panel
     st.markdown("<div class='panel'>", unsafe_allow_html=True)
