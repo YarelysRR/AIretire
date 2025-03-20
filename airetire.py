@@ -74,12 +74,30 @@ if "welcome_message_played" not in st.session_state:
 # Apply custom CSS for senior-friendly design
 def apply_custom_styling():
     # Get current settings from session state
-    contrast_bg = (
-        "#000" if st.session_state.high_contrast else "#ffffff"
-    )  # Pure white background
-    contrast_text = (
-        "#fff" if st.session_state.high_contrast else "#e0e0e0"
-    )  # Dark text color
+    is_high_contrast = st.session_state.high_contrast
+    
+    if is_high_contrast:
+        # High Contrast Mode Colors
+        background = "#000000"  # Pure black
+        text = "#ffffff"        # Pure white
+        button_bg = "#ffffff"   # White buttons
+        button_text = "#000000" # Black text on buttons
+        border = "#ffffff"      # White borders
+        primary = "#ffffff"     # White for headers
+        link_color = "#55ffff"  # Cyan for links in high contrast mode
+        error_color = "#ff5555" # Bright red for errors
+        
+    else:
+        # Normal Mode Colors - for DARK BLUE BACKGROUND
+        background = "#1a2b43"  # Dark blue background (assuming this is your background color)
+        text = "#ffffff"        # White text for good contrast on dark blue
+        button_bg = "#ff9e44"   # Orange button for contrast against dark blue
+        button_text = "#fff"    # White text on orange buttons
+        border = "#ff9e44"      # Orange borders
+        primary = "#5ce1e6"     # Light teal for headers - stands out on dark blue
+        link_color = "#5ce1e6"  # Light teal for links
+        error_color = "#ff5555" # Bright red for errors
+
     text_size = st.session_state.font_size
 
     st.markdown(
@@ -87,12 +105,18 @@ def apply_custom_styling():
         <style>
         /* Base styles */
         :root {{
-            --primary: #1b5e8a;
+            --background: {background};
+            --text: {text};
+            --button-bg: {button_bg};
+            --button-text: {button_text};
+            --border: {border};
+            --primary: {primary};
+            --link-color: {link_color};
+            --error-color: {error_color};
             --text-size: {text_size}px;
-            --text: {contrast_text};
-            --background: {contrast_bg};
-            --button-bg: #1b5e8a;
-            --button-bg-contrast: #fff;
+            --card-bg: #f8f8f8;
+            --card-text: #000000;
+
         }}
 
         /* Apply text size globally */
@@ -105,7 +129,6 @@ def apply_custom_styling():
             background-color: var(--button-bg);
             color: var(--button-text);
         }}
-        
         
 
         /* Fix help text visibility */
@@ -122,6 +145,24 @@ def apply_custom_styling():
             margin-bottom: 1.5rem;
             border: 1px solid #ddd;
         }}
+        
+        /* Links */
+        a {{
+            color: var(--link-color) !important;
+            text-decoration: underline !important;
+            font-weight: 500 !important;
+            transition: all 0.3s ease !important;
+        }}
+        
+        /* Headers - Light teal for visibility */
+        h1, h2, h4, h5, h6 {{
+            color: var(--primary) !important;
+            font-weight: 600 !important;
+            line-height: 1.3 !important;
+            margin-top: 1.5em !important;
+            margin-bottom: 0.75em !important;
+        }}
+
 
         /* Typography */
         h1 {{
@@ -538,7 +579,7 @@ def render_dashboard():
     # Upload section - conditionally shown
     if st.session_state.get("show_upload", False):
         st.markdown(
-            "<div style='padding: 10px; background-color: #f0f0f0; border-radius: 5px; margin-top: 15px;'>",
+            "<div style='padding: 5px; background-color: #f0f0f0; border-radius: 5px; margin-top: 15px;'>",
             unsafe_allow_html=True,
         )
         st.markdown(
@@ -673,37 +714,16 @@ def render_form_filling():
                     for j, form_type in enumerate(form_types[i:i + cols_per_row]):
                         with cols[j]:
                             st.markdown(f"""
-                                <div style='
-                                    border: 1px solid #cccccc;
-                                    border-radius: 10px;
-                                    padding: 20px;
-                                    margin: 10px 5px;
-                                    background-color: white;
-                                    height: 130px;
-                                    position: relative;
-                                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-                                '>
+                                <div class= "card">
                                     <h3 style='
-                                        color: #000000;
                                         margin-bottom: 10px;
                                         font-size: 1.5em;
                                     '>{form_templates[form_type]["title"]}</h3>
                                     <p style='
-                                        color: #333333;
                                         font-size: 1.1em;
                                         line-height: 1.4;
                                         margin-bottom: 45px;
                                     '>{form_templates[form_type]["description"]}</p>
-                                    <div style='
-                                        position: absolute;
-                                        bottom: 15px;
-                                        width: calc(100% - 40px);
-                                    '>
-                                        <hr style='margin: 10px 0;'>
-                                        <div style='text-align: center;'>
-                                            <small style='color: #555555;'></small>
-                                        </div>
-                                    </div>
                                 </div>
                             """, unsafe_allow_html=True)
 
@@ -744,14 +764,8 @@ def render_form_filling():
 
         # Show upload area if toggled
         if st.session_state.get("show_upload", False):
-            st.markdown(
-                "<div style='padding: 10px; background-color: #f0f0f0; border-radius: 5px; margin-top: 15px;'>",
-                unsafe_allow_html=True,
-            )
-            st.markdown(
-                "<p class='instruction'>Upload a completed form for processing</p>",
-                unsafe_allow_html=True,
-            )
+            
+            
             uploaded_form = st.file_uploader("Upload Form", type=["jpg", "png", "pdf"])
             if uploaded_form:
                 form_bytes = uploaded_form.read()
