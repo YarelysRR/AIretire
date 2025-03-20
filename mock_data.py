@@ -59,10 +59,12 @@ form_templates = {
     "benefit_application": {
         "title": "Senior Benefit Application",
         "fields": benefit_form_fields,
+        "description": "Apply for benefits and services"
     },
     "contact_update": {
         "title": "Contact Information Update",
         "fields": ["name", "address", "phone", "email"],
+        "description": "Update your contact information"
     },
     "medical_claim": {
         "title": "Medical Expense Claim",
@@ -74,6 +76,7 @@ form_templates = {
             "amount",
             "description",
         ],
+        "description": "Submit claims for medical expenses"
     },
     "address_change": {
         "title": "Address Change Request",
@@ -84,6 +87,7 @@ form_templates = {
             "new_address",
             "effective_date",
         ],
+        "description": "Update your residential address"
     },
     "beneficiary_update": {
         "title": "Beneficiary Update",
@@ -94,7 +98,94 @@ form_templates = {
             "new_beneficiary",
             "relationship",
         ],
+        "description": "Update your beneficiary information"
     },
+    # New Categories
+    "medication_tracker": {
+        "title": "Medication Management",
+        "fields": [
+            "name",
+            "account_id",
+            "medication_name",
+            "dosage",
+            "frequency",
+            "prescribing_doctor",
+            "pharmacy",
+            "start_date",
+            "end_date",
+            "notes"
+        ],
+        "description": "Track and manage your medications"
+    },
+    "appointment_scheduler": {
+        "title": "Appointment Record",
+        "fields": [
+            "name",
+            "account_id",
+            "appointment_type",
+            "provider_name",
+            "location",
+            "date",
+            "time",
+            "purpose",
+            "preparation_notes",
+            "followup_notes"
+        ],
+        "description": "Keep track of your appointments"
+    },
+    "emergency_contacts": {
+        "title": "Emergency Contacts Update",
+        "fields": [
+            "name",
+            "account_id",
+            "primary_contact_name",
+            "primary_contact_relationship",
+            "primary_contact_phone",
+            "primary_contact_email",
+            "secondary_contact_name",
+            "secondary_contact_relationship",
+            "secondary_contact_phone",
+            "secondary_contact_email",
+            "preferred_hospital",
+            "allergies",
+            "medical_conditions"
+        ],
+        "description": "Manage your contacts and critical information"
+    },
+    "document_storage": {
+        "title": "Important Document Storage",
+        "fields": [
+            "name",
+            "account_id",
+            "document_type",
+            "document_title",
+            "issue_date",
+            "expiry_date",
+            "issuing_authority",
+            "document_number",
+            "storage_location",
+            "digital_copy",
+            "notes"
+        ],
+        "description": "Store and track important document information"
+    },
+    "service_provider": {
+        "title": "Service Provider Directory",
+        "fields": [
+            "name",
+            "account_id",
+            "provider_type",
+            "provider_name",
+            "contact_person",
+            "phone",
+            "email",
+            "address",
+            "service_description",
+            "contract_details",
+            "payment_info"
+        ],
+        "description": "Manage your service providers' information"
+    }
 }
 
 

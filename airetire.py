@@ -22,6 +22,17 @@ from mock_data import mock_users, fraud_db, form_templates, format_balance
 from prompt_safety import suggest_alternative, process_prompt
 from ai_processor import get_ai_response
 
+
+# Set page configuration
+st.set_page_config(
+    page_title="AIretire: All-In-One Service",
+    page_icon=":guardsman:",
+    # Start with sidebar collapsed for simplicity
+    initial_sidebar_state="collapsed",
+    #layout="wide", (if you want to use a wide layout)
+)
+
+
 load_dotenv()
 genai.configure(api_key=os.environ.get("GOOGLE_API_KEY"))
 
@@ -58,13 +69,6 @@ if "welcome_message_played" not in st.session_state:
     st.session_state.welcome_message_played = False
 
 
-# Set page configuration
-st.set_page_config(
-    page_title="AIretire: Senior Account Access",
-    page_icon=":guardsman:",
-    # Start with sidebar collapsed for simplicity
-    initial_sidebar_state="collapsed",
-)
 
 
 # Apply custom CSS for senior-friendly design
@@ -425,16 +429,16 @@ def render_dashboard():
         display_error("Please log in first.")
         navigate_to("login")
         return
-
+    
     user = st.session_state.verified_user
-
+    
     # ========== Render ALL UI components first ==========
     # Welcome header
     st.markdown(
         f"<h2 style='text-align: center;'>Welcome, {user['name']}!</h2>",
         unsafe_allow_html=True,
     )
-
+    
     # Account Balance Panel
     st.markdown("<div class='panel'>", unsafe_allow_html=True)
     st.subheader("Account Balance")
@@ -443,50 +447,107 @@ def render_dashboard():
         unsafe_allow_html=True,
     )
     st.markdown("</div>", unsafe_allow_html=True)
-
+    
     # Forms & Applications Panel
     st.markdown("<div class='panel'>", unsafe_allow_html=True)
-    st.subheader("Forms & Applications")
+    st.subheader("Account Management")
     st.markdown(
-        "<p class='instruction'>Select a form type to get started</p>",
+        "<p class='instruction'>Select an option below to update your information</p>",
         unsafe_allow_html=True,
     )
-
-    form_type = st.selectbox(
-        "Select Form Type",
-        options=list(form_templates.keys()),
-        format_func=lambda x: form_templates[x]["title"],
-    )
-
-    col1, col2 = st.columns(2)
+    
+    # Account Management options with clear, professional styling
+    account_forms = {
+        "contact_update": "Update Contact Information",
+        "address_change": "Change Address",
+        "beneficiary_update": "Update Beneficiaries"
+    }
+    
+    # Create a column for buttons
+    col1, _ = st.columns([1, 2])
     with col1:
-        if st.button("Start New Form", use_container_width=True):
-            st.session_state.current_form = form_type
-            navigate_to("form_filling")
-
-    with col2:
-        if st.button("Upload Existing Form", use_container_width=True):
-            st.session_state.show_upload = not st.session_state.get(
-                "show_upload", False
-            )
-
-    # Upload section - properly nested inside the main panel
+        for form_type, title in account_forms.items():
+            st.markdown(f"""
+                <div style='
+                    margin: 20px 0px;
+                    padding: 15px;
+                    background-color: #f8f8f8;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                '>
+                    <div style='
+                        font-size: 1.4em;
+                        margin-bottom: 10px;
+                        color: #000000;
+                        font-weight: 600;
+                    '>{title}</div>
+                    <div style='
+                        font-size: 1.1em;
+                        color: #000000;
+                        margin-bottom: 12px;
+                        line-height: 1.5;
+                    '>{form_templates[form_type]["description"]}</div>
+                </div>
+            """, unsafe_allow_html=True)
+            
+            if st.button(
+                f"Select",
+                key=f"form_{form_type}",
+                use_container_width=False,  # Don't stretch to full width
+                type="primary"
+            ):
+                st.session_state.current_form = form_type
+                navigate_to("form_filling")
+            
+            # Add subtle separator between options
+            st.markdown("<hr style='margin: 20px 0; opacity: 0.2;'>", unsafe_allow_html=True)
+    
+    
+    st.markdown(f"""
+        <div style='
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f8f8;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        '>
+            <div style='
+                font-size: 1.4em;
+                margin-bottom: 10px;
+                color: #000000;
+                font-weight: 600;
+            '>Upload Existing Form</div>
+            <div style='
+                font-size: 1.1em;
+                color: #000000;
+                margin-bottom: 12px;
+                line-height: 1.5;
+            '>Submit a completed form for immediate processing</div>
+        </div>
+    """, unsafe_allow_html=True)
+    
+    if st.button(
+        "Upload Form",
+        key="upload_form_btn",
+        use_container_width=False,
+        type="primary"
+    ):
+        st.session_state.show_upload = not st.session_state.get("show_upload", False)
+    
+    # Upload section - conditionally shown
     if st.session_state.get("show_upload", False):
         st.markdown(
             "<div style='padding: 10px; background-color: #f0f0f0; border-radius: 5px; margin-top: 15px;'>",
             unsafe_allow_html=True,
         )
-
         st.markdown(
             "<p class='instruction'>Upload a completed form for processing</p>",
             unsafe_allow_html=True,
         )
         uploaded_form = st.file_uploader("Upload Form", type=["jpg", "png", "pdf"])
-
         if uploaded_form:
             form_bytes = uploaded_form.read()
             quality_result = check_image_quality(form_bytes)
-
             if "error" in quality_result or quality_result.get("qualityScore", 0) < 0.6:
                 display_error("Form quality is poor. Please upload a clearer image.")
             else:
@@ -498,7 +559,6 @@ def render_dashboard():
                     if extracted_data:
                         save_user_data(user["account_id"], extracted_data)
                         display_success("Form data extracted successfully.")
-
                         # Display extracted data
                         st.markdown(
                             "<table style='width:100%; border-collapse: collapse;'>",
@@ -516,10 +576,9 @@ def render_dashboard():
                         st.markdown("</table>", unsafe_allow_html=True)
                     else:
                         display_error("Could not extract form data.")
-
-        st.markdown("</div>", unsafe_allow_html=True)  # Close upload section div
-
-    st.markdown("</div>", unsafe_allow_html=True)  # Close main Forms panel
+        st.markdown("</div>", unsafe_allow_html=True)  # Close upload panel
+    
+    st.markdown("</div>", unsafe_allow_html=True)  # Close Forms panel
 
     # Profile Information Panel
     st.markdown("<div class='panel'>", unsafe_allow_html=True)
@@ -566,6 +625,7 @@ def render_dashboard():
             st.error(f"Audio error: {e}")
 
 
+
 def render_form_filling():
     # In render_form_filling():
 
@@ -577,29 +637,77 @@ def render_form_filling():
     # If no form is selected yet, show form selection
     if not st.session_state.current_form:
         st.markdown(
-            "<h2 style='text-align: center;'>Select a Form</h2>", unsafe_allow_html=True
+            "<h2 style='text-align: center;'>Forms & Applications</h2>", 
+            unsafe_allow_html=True
         )
         st.markdown("<div class='panel'>", unsafe_allow_html=True)
-        st.markdown(
-            "<p class='instruction'>Choose the type of form you need to fill out</p>",
-            unsafe_allow_html=True,
-        )
+        
+        # Categorize forms
+        form_categories = {
+            "Health & Medical": ["medical_claim", "medication_tracker", "appointment_scheduler"],
+            "Emergency & Contacts": ["emergency_contacts", "service_provider"],
+            "Documents & Benefits": ["benefit_application", "document_storage"]
+        }
 
-        form_options = list(form_templates.keys())
-        form_cols = st.columns(len(form_options))
-
-        for i, form_key in enumerate(form_options):
-            with form_cols[i]:
-                form_title = form_templates[form_key]["title"]
+        # Add tabs for categories
+        tabs = st.tabs(list(form_categories.keys()))
+        
+        # Display forms in each category
+        for tab, (category, form_types) in zip(tabs, form_categories.items()):
+            with tab:
                 st.markdown(
-                    f"<p style='text-align:center; font-weight:bold;'>{form_title}</p>",
-                    unsafe_allow_html=True,
+                    f"<p class='instruction'>Select a {category.lower()} form to get started</p>",
+                    unsafe_allow_html=True
                 )
-                if st.button(
-                    f"Select", key=f"select_{form_key}", use_container_width=True
-                ):
-                    st.session_state.current_form = form_key
-                    st.rerun()
+                
+                # Calculate number of columns (2 for smaller screens, 3 for larger)
+                cols_per_row = 2
+                
+                # Create rows of forms
+                for i in range(0, len(form_types), cols_per_row):
+                    cols = st.columns(cols_per_row)
+                    for j, form_type in enumerate(form_types[i:i + cols_per_row]):
+                        with cols[j]:
+                            # Create a card-like container for each form
+                            st.markdown(f"""
+                                <div style='
+                                    border: 1px solid #cccccc;
+                                    border-radius: 10px;
+                                    padding: 20px;
+                                    margin: 10px 5px;
+                                    background-color: white;
+                                    height: 130px;
+                                    position: relative;
+                                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+                                '>
+                                    <h3 style='
+                                        color: #000000;
+                                        margin-bottom: 10px;
+                                        font-size: 1.5em;
+                                    '>{form_templates[form_type]["title"]}</h3>
+                                    <p style='
+                                        color: #333333;
+                                        font-size: 1.1em;
+                                        line-height: 1.4;
+                                        margin-bottom: 45px;
+                                    '>{form_templates[form_type]["description"]}</p>
+                                    <div style='
+                                        position: absolute;
+                                        bottom: 15px;
+                                        width: calc(100% - 40px);
+                                    '>
+                                        <hr style='margin: 10px 0;'>
+                                        <div style='text-align: center;'>
+                                            <small style='color: #555555;'></small>
+                                        </div>
+                                    </div>
+                                </div>
+                            """, unsafe_allow_html=True)
+                            
+                            # Add a button that covers the entire card
+                            if st.button("Select", key=f"form_{form_type}", use_container_width=True):
+                                st.session_state.current_form = form_type
+                                st.rerun()
 
         st.markdown("</div>", unsafe_allow_html=True)
         return
@@ -690,7 +798,7 @@ def render_form_filling():
                     "Phone",
                     value=default_value,
                     key=f"field_{field}",
-                    placeholder="(123) 456-7890",
+                    placeholder="(555) 555-5555",
                 )
             elif field == "email":
                 st.markdown(
@@ -701,7 +809,7 @@ def render_form_filling():
                     "Email",
                     value=default_value,
                     key=f"field_{field}",
-                    placeholder="your.email@example.com",
+                    placeholder="email@example.com",
                 )
             elif field == "address":
                 st.markdown(
@@ -1029,14 +1137,21 @@ def process_voice_input(input_text):
 
 # Main Application Flow
 def main():
-    # Logo and Title
-    col1, col2, col3 = st.columns([1, 2, 1])
+    # Logo and Title 
+    col1, col2, col3 = st.columns([1, 3, 1])  # Give col2 more space!
+
     with col2:
-        st.image("assets/AIretire_Logo.png", width=200)  # Replace with actual logo path
+        st.image("assets/Logo_Airetire.png", width=550)
         st.markdown(
-            "<h1 style='text-align: center;'>AIretire: <br> Your all-in-one service </br> </h1>",
+            """
+            <h1 style='text-align: center; font-size: 22px; line-height: 1.4; max-width: 600px; margin: auto; margin-bottom: 30px;'>
+            Simplifying Life, One Service at a Time.
+            </h1>
+            """,
             unsafe_allow_html=True,
         )
+        
+    st.markdown("</div>", unsafe_allow_html=True)
 
     # Display accessibility sidebar
     display_accessibility_controls()
@@ -1051,13 +1166,14 @@ def main():
         render_dashboard()
     elif st.session_state.current_page == "form_filling":
         render_form_filling()
-    elif st.session_state.current_page == "ai_assistant":  # NEW LINE
+    elif st.session_state.current_page == "ai_assistant":
         render_ai_assistant()
 
     # Footer
     st.markdown(
         "<footer>© 2025 AIretire. All rights reserved.</footer>", unsafe_allow_html=True
     )
+
 
 
 if __name__ == "__main__":
