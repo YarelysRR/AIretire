@@ -44,6 +44,8 @@ def save_user_data(user_id, data):
                 raise ValueError(f"Safety check failed for {key}: {str(e)}")
         else:
             safe_data[key] = value
+    # Remove the 'changes' key if present
+    safe_data.pop("changes", None)
     
     if _user_data_cache is None:
         _user_data_cache = load_user_data()
@@ -57,6 +59,9 @@ def save_user_data(user_id, data):
     with open(USER_DATA_FILE, "w") as f:
         json.dump(all_data, f, indent=2)
     _user_data_cache = all_data
+    
+    # Inside save_user_data() in form_manager.py  
+    print("[SAVE] Saving Data:", safe_data)  # Log data being saved  
 
 
 def get_autocomplete_data(user_id, form_fields):
@@ -158,10 +163,11 @@ def validate_form_data(form_data, form_fields, check_required=True):
     errors = []
 
     # 1. Check required fields
-    if check_required:
-        for field in form_fields:
-            if field not in form_data or not form_data.get(field):
-                errors.append(f"Missing required field: {field.replace('_', ' ').title()}")
+    required_fields_set = set(form_fields)
+    missing_fields = required_fields_set.difference(form_data.keys())
+    if missing_fields:
+        errors.extend([f"Missing required field: {field.replace('_', ' ').title()}" for field in missing_fields])
+
 
     # 2. Validate date format for DOB
     if "dob" in form_data and form_data["dob"]:

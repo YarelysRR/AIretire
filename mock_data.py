@@ -1,16 +1,18 @@
 # Function to format balance properly
+from datetime import datetime
+
 def format_balance(amount):
     return f"${amount:,.2f}"
 
 
 # Mock user database with consistent fields
 mock_users = {
-    "RF-1234": {
-        "account_id": "RF-1234",
-        "name": "Alberto Torres",
+    "RF-1002": {
+        "account_id": "RF-1002",
+        "name": "Mary Summers",
         "balance": 5000,  # Stored as a number
         "account_type": "401(k)",
-        "last_login": "2025-03-10",
+        "last_login": datetime.now().strftime("%Y-%m-%d"),
         "address": "123 Main St, Anytown, USA",
         "phone": "(555) 123-4567",
         "email": "john.doe@example.com",
@@ -23,7 +25,7 @@ mock_users = {
         "name": "Jane Smith",
         "balance": 350000,  # Stored as a number
         "account_type": "IRA",
-        "last_login": "2025-03-11",
+        "last_login": datetime.now().strftime("%Y-%m-%d"),
         "address": "456 Oak St, Somecity, USA",  # Added missing address
         "phone": "(555) 789-0123",  # Added missing phone
         "email": "jane.smith@example.com",  # Added missing email
@@ -34,7 +36,7 @@ mock_users = {
 }
 
 # Mock fraud database
-fraud_db = {"RF-9012": {"reason": "suspicious activity", "date_flagged": "2025-02-15"}}
+fraud_db = {"RF-9012": {"reason": "suspicious activity", "date_flagged": datetime.now().strftime("%Y-%m-%d")}}
 
 
 # Function to check if an account is flagged as fraudulent
