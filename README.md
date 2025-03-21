@@ -168,7 +168,7 @@ AZURE_REGION=your_region
 4. Run the application
 
 ```bash
-streamlit run airetire.py
+streamlit run airetire.py --server.headless=true
 ```
 
 ## 📜 License
