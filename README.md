@@ -1,8 +1,10 @@
-#AIretire: Simplifying Seniors Life, One Service at a Time
+#AIretire: Simplifying Seniors' Lives, One Service at a Time.
 
 ## About the Project
 
-AIretire is a senior-centric digital assistant that combines secure document management, AI-driven form processing, and empathetic interactions. Built with Streamlit and Azure AI services, it features a sophisticated prompt pre-processing layer that auto-corrects inputs, redacts sensitive data, and validates prompts to ensure safe, accurate, and optimized communication. With voice/form hybrid interfaces, fraud detection, and accessibility tools (text-to-speech, high-contrast mode), AIretire delivers trustworthy retirement services and is designed to scale into a unified "digital file cabinet" for seniors’ critical needs.
+AIretire is a senior-centric digital assistant designed to simplify the lives of seniors by providing a comprehensive platform for managing personal and financial information. The application integrates secure document management, AI-driven form processing, and empathetic interactions to create a user-friendly experience tailored to the needs of older adults. Built using Streamlit and Azure AI services, AIretire features a prompt pre-processing layer that auto-corrects user inputs, redacts sensitive data, and validates prompts to ensure safe, accurate, and optimized communication.
+
+The application supports voice and form hybrid interfaces, enabling seniors to interact with the system in a way that is most comfortable for them. With built-in fraud detection and accessibility tools such as text-to-speech and high-contrast mode, AIretire aims to deliver trustworthy services while addressing the unique challenges faced by seniors and their authorized caregivers in managing their personal affairs.
 
 ### 🏆 Microsoft AI Innovation Challenge Submission
 
@@ -57,10 +59,17 @@ LanguageTool Library: A custom implementation for grammar correction, enhancing 
 
 ## 🎯 Project Goals
 
-1. Create a secure and accessible platform for senior services and personal management.
-2. Implement comprehensive prompt validation and correction
-3. Ensure responsible AI practices and ethical handling of sensitive data
-4. Provide multi-modal interaction (text, voice, form-filling)
+## Project Goals
+
+1. **Create a secure and accessible platform for senior services and personal management**: The primary goal is to develop a platform that ensures the safety and accessibility of services tailored to seniors, allowing them to manage their personal and financial information with confidence.
+
+2. **Implement comprehensive prompt validation and correction**: By incorporating advanced input processing techniques, the project aims to enhance user experience through accurate and contextually relevant interactions, reducing errors and improving clarity.
+
+3. **Ensure responsible AI practices and ethical handling of sensitive data**: AIretire is committed to upholding ethical standards in AI usage, ensuring that user data is handled responsibly and that privacy is prioritized throughout the application.
+
+4. **Provide multi-modal interaction (text, voice, form-filling)**: The application aims to cater to diverse user preferences by offering various interaction methods, making it easier for seniors to engage with the platform in a way that suits their needs.
+
+Through these goals, AIretire seeks to empower seniors, enhance their quality of life, and provide them with the tools necessary to navigate their personal and financial landscapes effectively.
 
 ## 🛠 Solution Components
 
