@@ -9,11 +9,11 @@ def format_balance(amount):
 mock_users = {
     "RF-1002": {
         "account_id": "RF-1002",
-        "name": "Mary Summers",
+        "name": "Sally Summers",
         "balance": 5000,  # Stored as a number
-        "account_type": "401(k)",
+        "account_type": "Social Security",
         "last_login": datetime.now().strftime("%Y-%m-%d"),
-        "address": "123 Main St, Anytown, USA",
+        "address": "123 Main St, Anytown, USA,98104",
         "phone": "(555) 123-4567",
         "email": "john.doe@example.com",
         "dob": "1955-01-01",
