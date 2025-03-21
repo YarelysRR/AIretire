@@ -57,7 +57,7 @@ LanguageTool Library: A custom implementation for grammar correction, enhancing 
 
 ## 🎯 Project Goals
 
-1. Create a secure and accessible platform for retirement services
+1. Create a secure and accessible platform for senior services and personal management.
 2. Implement comprehensive prompt validation and correction
 3. Ensure responsible AI practices and ethical handling of sensitive data
 4. Provide multi-modal interaction (text, voice, form-filling)
@@ -67,22 +67,23 @@ LanguageTool Library: A custom implementation for grammar correction, enhancing 
 ### Core Features
 
 1. **Intelligent Input Processing**
-
-   - Grammar and spelling correction
-   - Context-aware term optimization
-   - Multi-language support
+   - **Description**: This feature ensures that user inputs are accurate and contextually relevant, enhancing the overall user experience.
+   - **Grammar and spelling correction**: Automatically corrects common errors to improve clarity and professionalism in user submissions.
+   - **Context-aware term optimization**: Adapts terminology based on user profiles and preferences, making interactions more intuitive.
+   - **Multi-language support**: Allows users to interact in their preferred language, increasing accessibility for diverse user groups.
 
 2. **Safety & Security**
-
-   - PII detection and redaction
-   - Harmful content filtering
-   - Ethical language validation
+   - **Description**: Focused on protecting user data and ensuring safe interactions within the application.
+   - **PII detection and redaction**: Identifies and removes personally identifiable information from user inputs to safeguard privacy.
+   - **Harmful content filtering**: Analyzes user prompts for inappropriate or dangerous language, maintaining a safe environment.
+   - **Ethical language validation**: Ensures that responses are appropriate and sensitive to the needs of senior users.
 
 3. **Accessibility**
-   - Voice input/output
-   - Adjustable text size
-   - High contrast mode
-   - Clear error messaging
+   - **Description**: Designed to make the application usable for all seniors, regardless of their abilities or preferences.
+   - **Voice input/output**: Enables hands-free interaction, allowing users to communicate with the application using natural language.
+   - **Adjustable text size**: Users can modify text size for better readability, accommodating those with visual impairments.
+   - **High contrast mode**: Enhances visibility for users with low vision by providing a stark contrast between text and background.
+   - **Clear error messaging**: Provides straightforward feedback on errors, helping users understand and correct issues easily.
 
 ## 🏗 Architecture
 
