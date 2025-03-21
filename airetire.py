@@ -29,7 +29,7 @@ st.set_page_config(
     page_icon=":guardsman:",
     # Start with sidebar collapsed for simplicity
     initial_sidebar_state="collapsed",
-    #layout="wide", (if you want to use a wide layout)
+    layout="wide" #(if you want to use a wide layout)
 )
 
 
@@ -74,12 +74,30 @@ if "welcome_message_played" not in st.session_state:
 # Apply custom CSS for senior-friendly design
 def apply_custom_styling():
     # Get current settings from session state
-    contrast_bg = (
-        "#000" if st.session_state.high_contrast else "#ffffff"
-    )  # Pure white background
-    contrast_text = (
-        "#fff" if st.session_state.high_contrast else "#e0e0e0"
-    )  # Dark text color
+    is_high_contrast = st.session_state.high_contrast
+    
+    if is_high_contrast:
+        # High Contrast Mode Colors
+        background = "#000000"  # Pure black
+        text = "#ffffff"        # Pure white
+        button_bg = "#ffffff"   # White buttons
+        button_text = "#000000" # Black text on buttons
+        border = "#ffffff"      # White borders
+        primary = "#ffffff"     # White for headers
+        link_color = "#55ffff"  # Cyan for links in high contrast mode
+        error_color = "#ff5555" # Bright red for errors
+        
+    else:
+        # Normal Mode Colors - for DARK BLUE BACKGROUND
+        background = "#1a2b43"  # Dark blue background (assuming this is your background color)
+        text = "#ffffff"        # White text for good contrast on dark blue
+        button_bg = "#ff9e44"   # Orange button for contrast against dark blue
+        button_text = "#fff"    # White text on orange buttons
+        border = "#ff9e44"      # Orange borders
+        primary = "#5ce1e6"     # Light teal for headers - stands out on dark blue
+        link_color = "#5ce1e6"  # Light teal for links
+        error_color = "#ff5555" # Bright red for errors
+
     text_size = st.session_state.font_size
 
     st.markdown(
@@ -87,12 +105,18 @@ def apply_custom_styling():
         <style>
         /* Base styles */
         :root {{
-            --primary: #1b5e8a;
+            --background: {background};
+            --text: {text};
+            --button-bg: {button_bg};
+            --button-text: {button_text};
+            --border: {border};
+            --primary: {primary};
+            --link-color: {link_color};
+            --error-color: {error_color};
             --text-size: {text_size}px;
-            --text: {contrast_text};
-            --background: {contrast_bg};
-            --button-bg: #1b5e8a;
-            --button-bg-contrast: #fff;
+            --card-bg: #f8f8f8;
+            --card-text: #000000;
+
         }}
 
         /* Apply text size globally */
@@ -103,9 +127,8 @@ def apply_custom_styling():
         /* High-contrast overrides */
         .stButton>button {{
             background-color: var(--button-bg);
-            color: var(--button-text);
+            color: var(--button-text); 
         }}
-        
         
 
         /* Fix help text visibility */
@@ -121,7 +144,27 @@ def apply_custom_styling():
             padding: 1.5rem;
             margin-bottom: 1.5rem;
             border: 1px solid #ddd;
+            max-width: 400px;
         }}
+        
+        
+        /* Links */
+        a {{
+            color: var(--link-color) !important;
+            text-decoration: underline !important;
+            font-weight: 500 !important;
+            transition: all 0.3s ease !important;
+        }}
+        
+        /* Headers - Light teal for visibility */
+        h1, h2, h4, h5, h6 {{
+            color: var(--primary) !important;
+            font-weight: 600 !important;
+            line-height: 1.3 !important;
+            margin-top: 1.5em !important;
+            margin-bottom: 0.75em !important;
+        }}
+
 
         /* Typography */
         h1 {{
@@ -141,6 +184,13 @@ def apply_custom_styling():
             color: var(--text);
             font-weight: 500;
         }}
+        
+        img {{
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        }}
+        
 
         /* Responsive grid */
         @media (max-width: 768px) {{
@@ -177,13 +227,13 @@ def navigate_to(page_name):
 # Display Top Navigation Bar
 def display_navigation():
     button_state = st.session_state.verified_user is None
-
+    
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
         if st.button("Login", key="nav_login", use_container_width=True):
             navigate_to("login")
-
+            
     with col2:
         if st.button(
             "Dashboard",
@@ -209,7 +259,6 @@ def display_navigation():
         ):
             navigate_to("ai_assistant")
 
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 # Display Success, Error, and Info Messages with custom styling
@@ -347,7 +396,7 @@ def display_accessibility_controls():
 # Login Page
 def render_login_page():
     st.markdown(
-        "<h2 style='text-align: center;'>Account Verification</h2>",
+        "<h2 style='text-align: center; margin-top: 0; margin-bottom: 5px;'>Account Verification</h2>",
         unsafe_allow_html=True,
     )
 
@@ -469,22 +518,19 @@ def render_dashboard():
     with col1:
         for form_type, title in account_forms.items():
             st.markdown(f"""
-                <div style='
+                <div class="card"style='
                     margin: 20px 0px;
                     padding: 15px;
-                    background-color: #f8f8f8;
                     border-radius: 8px;
                     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                 '>
                     <div style='
                         font-size: 1.4em;
                         margin-bottom: 10px;
-                        color: #000000;
                         font-weight: 600;
                     '>{title}</div>
                     <div style='
                         font-size: 1.1em;
-                        color: #000000;
                         margin-bottom: 12px;
                         line-height: 1.5;
                     '>{form_templates[form_type]["description"]}</div>
@@ -505,22 +551,19 @@ def render_dashboard():
     
     
     st.markdown(f"""
-        <div style='
+        <div class= "card" style='
             margin: 20px 0;
             padding: 15px;
-            background-color: #f8f8f8;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         '>
             <div style='
                 font-size: 1.4em;
                 margin-bottom: 10px;
-                color: #000000;
                 font-weight: 600;
-            '>Upload Existing Form</div>
+            '>Upload Non-Digital Form</div>
             <div style='
                 font-size: 1.1em;
-                color: #000000;
                 margin-bottom: 12px;
                 line-height: 1.5;
             '>Submit a completed form for immediate processing</div>
@@ -538,7 +581,7 @@ def render_dashboard():
     # Upload section - conditionally shown
     if st.session_state.get("show_upload", False):
         st.markdown(
-            "<div style='padding: 10px; background-color: #f0f0f0; border-radius: 5px; margin-top: 15px;'>",
+            "<div style='padding: 5px; background-color: #f0f0f0; border-radius: 5px; margin-top: 15px;'>",
             unsafe_allow_html=True,
         )
         st.markdown(
@@ -633,23 +676,23 @@ def render_dashboard():
             st.error(f"Audio error: {e}")
 
 
-
 def render_form_filling():
-    # In render_form_filling():
+    # Check if user is verified
+    if "verified_user" not in st.session_state or st.session_state.verified_user is None:
+        st.error("Please log in first.")
+        st.stop()  # Stops further execution, same as return but clearer for Streamlit apps
 
-    if not st.session_state.verified_user:
-        display_error("Please login first.")
-        navigate_to("login")
-        return
+    # Main user variable assignment
+    user = st.session_state.verified_user
 
-    # If no form is selected yet, show form selection
+    # If no form selected, show options
     if not st.session_state.current_form:
         st.markdown(
-            "<h2 style='text-align: center;'>Forms & Applications</h2>", 
+            "<h2 style='text-align: center;'>Forms & Applications</h2>",
             unsafe_allow_html=True
         )
         st.markdown("<div class='panel'>", unsafe_allow_html=True)
-        
+
         # Categorize forms
         form_categories = {
             "Health & Medical": ["medical_claim", "medication_tracker", "appointment_scheduler"],
@@ -657,70 +700,104 @@ def render_form_filling():
             "Documents & Benefits": ["benefit_application", "document_storage"]
         }
 
-        # Add tabs for categories
+        # Tabs for categories
         tabs = st.tabs(list(form_categories.keys()))
-        
-        # Display forms in each category
+
+        # Display forms in each tab
         for tab, (category, form_types) in zip(tabs, form_categories.items()):
             with tab:
                 st.markdown(
                     f"<p class='instruction'>Select a {category.lower()} form to get started</p>",
                     unsafe_allow_html=True
                 )
-                
-                # Calculate number of columns (2 for smaller screens, 3 for larger)
                 cols_per_row = 2
-                
-                # Create rows of forms
                 for i in range(0, len(form_types), cols_per_row):
                     cols = st.columns(cols_per_row)
                     for j, form_type in enumerate(form_types[i:i + cols_per_row]):
                         with cols[j]:
-                            # Create a card-like container for each form
                             st.markdown(f"""
-                                <div style='
-                                    border: 1px solid #cccccc;
-                                    border-radius: 10px;
-                                    padding: 20px;
-                                    margin: 10px 5px;
-                                    background-color: white;
-                                    height: 130px;
-                                    position: relative;
-                                    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-                                '>
+                                <div class= "card">
                                     <h3 style='
-                                        color: #000000;
                                         margin-bottom: 10px;
                                         font-size: 1.5em;
                                     '>{form_templates[form_type]["title"]}</h3>
                                     <p style='
-                                        color: #333333;
                                         font-size: 1.1em;
                                         line-height: 1.4;
                                         margin-bottom: 45px;
                                     '>{form_templates[form_type]["description"]}</p>
-                                    <div style='
-                                        position: absolute;
-                                        bottom: 15px;
-                                        width: calc(100% - 40px);
-                                    '>
-                                        <hr style='margin: 10px 0;'>
-                                        <div style='text-align: center;'>
-                                            <small style='color: #555555;'></small>
-                                        </div>
-                                    </div>
                                 </div>
                             """, unsafe_allow_html=True)
-                            
-                            # Add a button that covers the entire card
-                            if st.button("Select", key=f"form_{form_type}", use_container_width=True):
+
+                            # Button to select form
+                            if st.button("Select", key=f"form_{form_type}", use_container_width=False): #Put true IF you want them to be as wide as the container
                                 st.session_state.current_form = form_type
                                 st.rerun()
 
         st.markdown("</div>", unsafe_allow_html=True)
-        return
 
-    user = st.session_state.verified_user
+        # Upload Existing Form Section
+        st.markdown(f"""
+            <div class="card" style='
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            '>
+            <div style='
+                font-size: 1.4em;
+                margin-bottom: 10px;
+                font-weight: 600;
+            '>Upload Non-Digital Form</div>
+            <div style='
+                font-size: 1.1em;
+                margin-bottom: 12px;
+                line-height: 1.5;
+            '>Submit a completed form for immediate processing</div>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Upload button
+        if st.button("Upload Form", key="upload_form_btn", use_container_width=False, type="primary"):
+            st.session_state.show_upload = not st.session_state.get("show_upload", False)
+
+        # Show upload area if toggled
+        if st.session_state.get("show_upload", False):
+            
+            
+            uploaded_form = st.file_uploader("Upload Form", type=["jpg", "png", "pdf"])
+            if uploaded_form:
+                form_bytes = uploaded_form.read()
+                quality_result = check_image_quality(form_bytes)
+                if "error" in quality_result or quality_result.get("qualityScore", 0) < 0.6:
+                    display_error("Form quality is poor. Please upload a clearer image.")
+                else:
+                    form_result = process_document(form_bytes, "form")
+                    if not form_result["success"]:
+                        display_error(f"Error: {form_result.get('error')}")
+                    else:
+                        extracted_data = extract_form_data(form_result)
+                        if extracted_data:
+                            save_user_data(user["account_id"], extracted_data)
+                            display_success("Form data extracted successfully.")
+                            st.markdown("<table style='width:100%; border-collapse: collapse;'>", unsafe_allow_html=True)
+                            for key, value in extracted_data.items():
+                                field_name = key.replace("_", " ").title()
+                                st.markdown(
+                                    f"<tr>"
+                                    f"<td style='padding:8px; border:1px solid #ddd; font-weight:bold;'>{field_name}</td>"
+                                    f"<td style='padding:8px; border:1px solid #ddd;'>{value}</td>"
+                                    f"</tr>",
+                                    unsafe_allow_html=True,
+                                )
+                            st.markdown("</table>", unsafe_allow_html=True)
+                        else:
+                            display_error("Could not extract form data.")
+            st.markdown("</div>", unsafe_allow_html=True)
+
+        st.stop()  # Stop further processing since no form selected yet (avoids unnecessary rendering)
+
+    # If a form is selected, show form content
     form_type = st.session_state.current_form
     form_template = form_templates[form_type]
 
@@ -976,6 +1053,7 @@ def render_form_filling():
 
 # Add to AIretire.py
 def render_ai_assistant():
+    
     # Initialize session state variables at the top level
     for key, default_value in {
         "messages": [],
@@ -1012,7 +1090,7 @@ def render_ai_assistant():
     # Input area with improved layout
     input_container = st.container()
     with input_container:
-        col1, col2 = st.columns([6, 1])
+        col1, col2 = st.columns([6,1])
         
         with col1:
             text_input = st.chat_input(
@@ -1120,6 +1198,7 @@ def render_ai_assistant():
             st.session_state.is_speaking = True
             st.markdown(audio_html, unsafe_allow_html=True)
         st.rerun()
+        
 
 def process_voice_input(input_text):
     """Helper function to process both voice and text input"""
@@ -1150,12 +1229,24 @@ def process_voice_input(input_text):
 
 
 # Main Application Flow
+
+def get_base64_image(image_path):
+    with open(image_path, "rb") as img_file:
+        return base64.b64encode(img_file.read()).decode() #A way to center image, Streamlit doesn't automatically serve files from subdirectories
 def main():
     # Logo and Title 
     col1, col2, col3 = st.columns([1, 3, 1])  # Give col2 more space!
 
     with col2:
-        st.image("assets/Logo_Airetire.png", width=550)
+        base64_img = get_base64_image("assets/Logo_Airetire.png")
+        st.markdown(
+            f"""
+            <div style="text-align: center;">
+                <img src="data:image/png;base64,{base64_img}" style="width:600px;">
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
         st.markdown(
             """
             <h1 style='text-align: center; font-size: 22px; line-height: 1.4; max-width: 600px; margin: auto; margin-bottom: 30px;'>
@@ -1185,7 +1276,7 @@ def main():
 
     # Footer
     st.markdown(
-        "<footer>© 2025 AIretire. All rights reserved.</footer>", unsafe_allow_html=True
+        "<footer style='text-align: center; margin-top: 20px; font-size: 20px;'>© 2025 AIretire. All rights reserved.</footer>", unsafe_allow_html=True
     )
 
 
