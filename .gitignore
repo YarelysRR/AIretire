@@ -3,3 +3,6 @@
 /venv/
 temp_azure_audio.wav
 .language_tool_cache/
+.user_data.json
+*.pyc
+__pycache__/

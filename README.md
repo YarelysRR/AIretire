@@ -1,8 +1,10 @@
-#AIretire: Simplifying Seniors Life, One Service at a Time
+#AIretire: Simplifying Seniors' Lives, One Service at a Time.
 
 ## About the Project
 
-AIretire is a senior-centric digital assistant that combines secure document management, AI-driven form processing, and empathetic interactions. Built with Streamlit and Azure AI services, it features a sophisticated prompt pre-processing layer that auto-corrects inputs, redacts sensitive data, and validates prompts to ensure safe, accurate, and optimized communication. With voice/form hybrid interfaces, fraud detection, and accessibility tools (text-to-speech, high-contrast mode), AIretire delivers trustworthy retirement services and is designed to scale into a unified "digital file cabinet" for seniors’ critical needs.
+AIretire is a senior-centric digital assistant designed to simplify the lives of seniors by providing a comprehensive platform for managing personal and financial information. The application integrates secure document management, AI-driven form processing, and empathetic interactions to create a user-friendly experience tailored to the needs of older adults. Built using Streamlit and Azure AI services, AIretire features a prompt pre-processing layer that auto-corrects user inputs, redacts sensitive data, and validates prompts to ensure safe, accurate, and optimized communication.
+
+The application supports voice and form hybrid interfaces, enabling seniors to interact with the system in a way that is most comfortable for them. With built-in fraud detection and accessibility tools such as text-to-speech and high-contrast mode, AIretire aims to deliver trustworthy services while addressing the unique challenges faced by seniors and their authorized caregivers in managing their personal affairs.
 
 ### 🏆 Microsoft AI Innovation Challenge Submission
 
@@ -15,7 +17,7 @@ Seniors often encounter unique challenges in managing their personal and financi
 - Difficulty with technical terminology
 - Increased vulnerability to financial fraud
 - Need for clear, accurate communication
-- Concerns about Privacy and security 
+- Concerns about Privacy and security
 
 Our solution implements a multi-layered prompt processing system that:
 
@@ -38,13 +40,14 @@ Frontend: Streamlit for building the user interface.
 Backend: Python for application logic and data processing.
 
 **Azure Services**:
-  - Azure Computer Vision: Analyzes and processes images, including document uploads, ensuring quality and integrity.
-  - Azure Speech Services: Enables voice interaction and text-to-speech capabilities, allowing users to engage with the application naturally.
-  - Azure Text Analytics: Extracts insights from user inputs, including:
-    - Entity Recognition: Identifies and extracts entities from user inputs.
-    - PII Detection: Automatically detects sensitive information to protect user privacy.
-  - Azure Content Safety API: Provides real-time validation of user inputs to ensure safety and compliance by analyzing for harmful content.
-  - Azure Document Intelligence: Extracts and processes structured data from various document types, facilitating efficient handling of user-uploaded documents.
+
+- Azure Computer Vision: Analyzes and processes images, including document uploads, ensuring quality and integrity.
+- Azure Speech Services: Enables voice interaction and text-to-speech capabilities, allowing users to engage with the application naturally.
+- Azure Text Analytics: Extracts insights from user inputs, including:
+  - Entity Recognition: Identifies and extracts entities from user inputs.
+  - PII Detection: Automatically detects sensitive information to protect user privacy.
+- Azure Content Safety API: Provides real-time validation of user inputs to ensure safety and compliance by analyzing for harmful content.
+- Azure Document Intelligence: Extracts and processes structured data from various document types, facilitating efficient handling of user-uploaded documents.
 
 **Other Technologies**:
 Google Gemini: Utilized for advanced AI capabilities, specifically the Gemini-1.5-Pro model.
@@ -57,22 +60,31 @@ LanguageTool Library: A custom implementation for grammar correction, enhancing 
 
 ## 🎯 Project Goals
 
-1. Create a secure and accessible platform for senior services and personal management.
-2. Implement comprehensive prompt validation and correction
-3. Ensure responsible AI practices and ethical handling of sensitive data
-4. Provide multi-modal interaction (text, voice, form-filling)
+## Project Goals
+
+1. **Create a secure and accessible platform for senior services and personal management**: The primary goal is to develop a platform that ensures the safety and accessibility of services tailored to seniors, allowing them to manage their personal and financial information with confidence.
+
+2. **Implement comprehensive prompt validation and correction**: By incorporating advanced input processing techniques, the project aims to enhance user experience through accurate and contextually relevant interactions, reducing errors and improving clarity.
+
+3. **Ensure responsible AI practices and ethical handling of sensitive data**: AIretire is committed to upholding ethical standards in AI usage, ensuring that user data is handled responsibly and that privacy is prioritized throughout the application.
+
+4. **Provide multi-modal interaction (text, voice, form-filling)**: The application aims to cater to diverse user preferences by offering various interaction methods, making it easier for seniors to engage with the platform in a way that suits their needs.
+
+Through these goals, AIretire seeks to empower seniors, enhance their quality of life, and provide them with the tools necessary to navigate their personal and financial landscapes effectively.
 
 ## 🛠 Solution Components
 
 ### Core Features
 
 1. **Intelligent Input Processing**
+
    - **Description**: This feature ensures that user inputs are accurate and contextually relevant, enhancing the overall user experience.
    - **Grammar and spelling correction**: Automatically corrects common errors to improve clarity and professionalism in user submissions.
    - **Context-aware term optimization**: Adapts terminology based on user profiles and preferences, making interactions more intuitive.
    - **Multi-language support**: Allows users to interact in their preferred language, increasing accessibility for diverse user groups.
 
 2. **Safety & Security**
+
    - **Description**: Focused on protecting user data and ensuring safe interactions within the application.
    - **PII detection and redaction**: Identifies and removes personally identifiable information from user inputs to safeguard privacy.
    - **Harmful content filtering**: Analyzes user prompts for inappropriate or dangerous language, maintaining a safe environment.
@@ -159,7 +171,7 @@ AZURE_REGION=your_region
 4. Run the application
 
 ```bash
-streamlit run airetire.py
+streamlit run airetire.py --server.headless=true
 ```
 
 ## 📜 License
