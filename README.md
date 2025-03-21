@@ -52,7 +52,7 @@ LanguageTool Library: A custom implementation for grammar correction, enhancing 
 
 ## 🎥 Demo & Presentation
 
-- [Demo Video](link_to_demo) - Coming soon
+- [Demo Video](https://drive.google.com/file/d/1806oj9cxQoEMICQth4me_MvIq31E_-Wu/view?usp=sharing)
 - [Presentation](link_to_presentation) - Coming soon
 
 ## 🎯 Project Goals
