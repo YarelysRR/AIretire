@@ -1,4 +1,4 @@
-#AIretire: Simplifying Seniors Life, One Service at a Time 
+#AIretire: Simplifying Seniors Life, One Service at a Time
 
 ## About the Project
 
@@ -6,25 +6,16 @@ AIretire is a senior-centric digital assistant that combines secure document man
 
 ### 🏆 Microsoft AI Innovation Challenge Submission
 
-**Category**: Auto Correct and Prompt Validation Before AI Execution
+**Executive Challenge Category**: Auto-Correct and Prompt Validation Before AI Execution
 
-## 🏆 Competition Alignment - Judging Criteria Implementation
+### 🎯 Contexttual Challenges
 
-| Criteria         | Our Implementation                                                                 |
-|------------------|------------------------------------------------------------------------------------|
-| **Performance**  | Multi-stage validation pipeline with 95%+ accuracy in input correction             |
-| **Innovation**   | Senior-specific term optimization + voice-form hybrid interaction model            |
-| **Azure Usage**  | Multiple Azure Services Integrated                                                 |
-| **Responsible AI** | Real-time PII redaction + ethical response guidelines                            |
-
-### 🎯 Executive Challenge
-
-Seniors managing retirement accounts face unique challenges:
+Seniors often encounter unique challenges in managing their personal and financial information, including:
 
 - Difficulty with technical terminology
 - Increased vulnerability to financial fraud
 - Need for clear, accurate communication
-- Privacy and security concerns
+- Concerns about Privacy and security 
 
 Our solution implements a multi-layered prompt processing system that:
 
@@ -32,6 +23,32 @@ Our solution implements a multi-layered prompt processing system that:
 - Protects sensitive information
 - Ensures clear and ethical AI responses
 - Provides accessible interface options
+
+## 🏆 Competition Alignment - Judging Criteria Implementation
+
+| Criteria           | Our Implementation                                                      |
+| ------------------ | ----------------------------------------------------------------------- |
+| **Performance**    | Multi-stage validation pipeline input correction                        |
+| **Innovation**     | Senior-specific term optimization + voice-form hybrid interaction model |
+| **Azure Usage**    | Multiple Azure Services Integrated                                      |
+| **Responsible AI** | Real-time PII redaction + ethical response guidelines                   |
+
+**Technologies Used**
+Frontend: Streamlit for building the user interface.
+Backend: Python for application logic and data processing.
+
+**Azure Services**:
+  - Azure Computer Vision: Analyzes and processes images, including document uploads, ensuring quality and integrity.
+  - Azure Speech Services: Enables voice interaction and text-to-speech capabilities, allowing users to engage with the application naturally.
+  - Azure Text Analytics: Extracts insights from user inputs, including:
+    - Entity Recognition: Identifies and extracts entities from user inputs.
+    - PII Detection: Automatically detects sensitive information to protect user privacy.
+  - Azure Content Safety API: Provides real-time validation of user inputs to ensure safety and compliance by analyzing for harmful content.
+  - Azure Document Intelligence: Extracts and processes structured data from various document types, facilitating efficient handling of user-uploaded documents.
+
+**Other Technologies**:
+Google Gemini: Utilized for advanced AI capabilities, specifically the Gemini-1.5-Pro model.
+LanguageTool Library: A custom implementation for grammar correction, enhancing the clarity of user inputs.
 
 ## 🎥 Demo & Presentation
 
@@ -53,14 +70,12 @@ Our solution implements a multi-layered prompt processing system that:
 
    - Grammar and spelling correction
    - Context-aware term optimization
-   - Incomplete query detection
    - Multi-language support
 
 2. **Safety & Security**
 
    - PII detection and redaction
    - Harmful content filtering
-   - Bias detection
    - Ethical language validation
 
 3. **Accessibility**
@@ -68,25 +83,6 @@ Our solution implements a multi-layered prompt processing system that:
    - Adjustable text size
    - High contrast mode
    - Clear error messaging
-
-### Azure Services Integration
-
-1. **Language Services**
-
-   - Text Analytics for grammar correction
-   - Language Understanding for context
-   - Content Safety for filtering
-
-2. **Speech Services**
-
-   - Speech-to-Text for voice input
-   - Text-to-Speech for responses
-   - Neural voice capabilities
-
-3. **Security Services**
-   - PII detection
-   - Content moderation
-   - Fraud detection
 
 ## 🏗 Architecture
 
@@ -106,71 +102,6 @@ Voice/Text → Correction → Safety Check → Optimization → Delivery
     D --> E[Safety Filter]
     E --> F[AI Response]
     F --> G[Accessibility Formatting]
-
-### Key Components
-
-1. **Input Layer**
-
-   - Text input handling
-   - Voice processing
-   - Form validation
-
-2. **Processing Layer**
-
-   - Grammar correction
-   - Context analysis
-   - Term optimization
-
-3. **Safety Layer**
-
-   - PII detection
-   - Content filtering
-   - Bias checking
-
-4. **Output Layer**
-   - Response validation
-   - Accessibility formatting
-   - Multi-modal delivery
-
-## 💡 Approach & Methodology
-
-### Design Principles
-
-1. **Security First**
-
-   - Proactive PII protection
-   - Secure data handling
-   - Privacy preservation
-
-2. **Accessibility Focus**
-
-   - Senior-friendly interface
-   - Clear feedback
-   - Multiple input methods
-
-3. **Intelligent Processing**
-   - Context-aware corrections
-   - Natural language understanding
-   - Adaptive learning
-
-### Implementation Strategy
-
-1. **Layered Validation**
-
-   - Input sanitization
-   - Content analysis
-   - Safety verification
-
-2. **Prompt Optimization**
-
-   - Grammar correction
-   - Context enhancement
-   - Clarity improvement
-
-3. **Response Quality**
-   - Accuracy verification
-   - Relevance checking
-   - Ethical compliance
 
 ## 🎓 Key Learnings
 
@@ -230,39 +161,8 @@ AZURE_REGION=your_region
 streamlit run airetire.py
 ```
 
-## 📊 Performance Metrics
-
-### Accuracy
-
-- 95% grammar correction accuracy
-- 99% PII detection rate
-- 90% context preservation
-
-### Response Time
-
-- <100ms for text processing
-- <2s for voice processing
-- <3s for complete prompt validation
-
-## 🤝 Contributing
-
-We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details.
-
 ## 📜 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
-
-- Microsoft Azure AI team
-- Streamlit community
-- Open source contributors
-
-## 📞 Contact
-
-- Project Link: [https://github.com/yourusername/AIretire](https://github.com/yourusername/AIretire)
-- Demo Site: [https://airetire.azurewebsites.net](https://airetire.azurewebsites.net)
-
----
-
-_This project was developed for the Microsoft AI Innovation Challenge 2024_
+_This project was developed for the Microsoft AI Innovation Challenge 2025_
