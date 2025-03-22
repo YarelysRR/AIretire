@@ -164,8 +164,24 @@ pip install -r requirements.txt
 
 ```bash
 # Create .env file with:
-AZURE_SUBSCRIPTION_KEY=your_key
-AZURE_REGION=your_region
+To run the application, you need to create a `.env` file in the root directory of your project with the following configuration:
+FORM_RECOGNIZER_ENDPOINT="https://<resourcesname>.cognitiveservices.azure.com/"
+FORM_RECOGNIZER_KEY=""
+VISION_ENDPOINT="https://<resourcesname>.cognitiveservices.azure.com/"
+VISION_API_KEY=""
+SPEECH_REGION=""
+SPEECH_KEY=""
+CONTENT_SAFETY_ENDPOINT="https://<resourcesname>.cognitiveservices.azure.com/"
+CONTENT_SAFETY_KEY=""
+GEMINI_API_KEY=""
+LANGUAGE_SERVICE_ENDPOINT=""
+LANGUAGE_SERVICE_KEY=""
+```
+
+### Important Notes:
+- Replace `<resourcesname>` with the actual name of your Azure resources.
+- Ensure that you do not share your actual API keys or sensitive information publicly.
+
 ```
 
 4. Run the application
