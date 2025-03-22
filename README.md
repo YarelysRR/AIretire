@@ -176,12 +176,10 @@ CONTENT_SAFETY_KEY=""
 GEMINI_API_KEY=""
 LANGUAGE_SERVICE_ENDPOINT=""
 LANGUAGE_SERVICE_KEY=""
-```
 
-### Important Notes:
+# Important Notes:
 - Replace `<resourcesname>` with the actual name of your Azure resources.
-- Ensure that you do not share your actual API keys or sensitive information publicly.
-
+- Do not share your actual API keys or sensitive information publicly.
 ```
 
 4. Run the application
